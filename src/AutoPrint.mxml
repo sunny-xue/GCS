@@ -33,12 +33,11 @@
 			{
 				socket = new Socket(); //new出来 ,这时候才能被使用
 				
-				socket.connect("localhost",8080); //连接服务器 , 参数 host:String,prot:int
-				
 				socket.addEventListener(Event.CONNECT,funConnect); //监听是否连接上服务器
 				socket.addEventListener(ProgressEvent.SOCKET_DATA,getDataFun);
-				
 				socket.addEventListener(Event.CLOSE,funClose); //监听服务器是否关闭	
+				socket.addEventListener(IOErrorEvent.IO_ERROR,connectError);
+				socket.connect("localhost",8080); //连接服务器 , 参数 host:String,prot:int
 			}
 			
 			private function funConnect(event:Event):void
@@ -49,6 +48,13 @@
 			private function funClose(event:Event):void
 			{
 				connStatus.source = "assets/imgs/offline.png";
+				Logger.error("socket通讯连接关闭");
+			}
+			
+			protected function connectError(event:IOErrorEvent):void
+			{
+				connStatus.source = "assets/imgs/offline.png";
+				Logger.error("socket通讯连接失败");
 			}
 			
 			protected function getDataFun(e:ProgressEvent):void
