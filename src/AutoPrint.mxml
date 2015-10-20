@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009" 
+					   xmlns:s="library://ns.adobe.com/flex/spark" 
+					   xmlns:mx="library://ns.adobe.com/flex/mx"
+					   initialize="onInit(event)">
+	<fx:Script>
+		<![CDATA[
+			import com.logger.core.Logger;
+			
+			import mx.collections.ArrayCollection;
+			import mx.events.FlexEvent;
+			import mx.events.StateChangeEvent;
+			
+			import spark.events.IndexChangeEvent;
+			
+			private var socket:Socket;
+			private var sqlConn:SQLConnection;
+			private var sqlSta:SQLStatement;
+			private var isAutoPrint:Boolean = true;
+			//打印机
+			[Bindable]private var printers:ArrayCollection = new ArrayCollection();
+			protected function onInit(event:FlexEvent):void
+			{
+				this.addEventListener(StateChangeEvent.CURRENT_STATE_CHANGE, stateChangedHandler);
+				listenterSocket();
+				initApp();
+				getAllPrinters();
+				//TODO 监听post的数据
+			}
+			
+			/**监听socket消息*/
+			private function listenterSocket():void
+			{
+				socket = new Socket(); //new出来 ,这时候才能被使用
+				
+				socket.connect("localhost",8080); //连接服务器 , 参数 host:String,prot:int
+				
+				socket.addEventListener(Event.CONNECT,funConnect); //监听是否连接上服务器
+				socket.addEventListener(ProgressEvent.SOCKET_DATA,getDataFun);
+				
+				socket.addEventListener(Event.CLOSE,funClose); //监听服务器是否关闭	
+			}
+			
+			private function funConnect(event:Event):void
+			{
+				connStatus.source = "assets/imgs/connection.png";
+			}
+			
+			private function funClose(event:Event):void
+			{
+				connStatus.source = "assets/imgs/offline.png";
+			}
+			
+			protected function getDataFun(e:ProgressEvent):void
+			{
+				var data:String = '';
+				while (socket.bytesAvailable)
+				{
+					data += socket.readMultiByte(socket.bytesAvailable,"utf8");
+				}
+				
+				//TODO解析数据
+			}
+			
+			/**初始化程序设置*/
+			private function initApp():void
+			{
+				var dbFile:File = File.applicationStorageDirectory.resolvePath("app.db");
+				
+				sqlConn = new SQLConnection();
+				sqlConn.addEventListener(SQLEvent.OPEN,openHandler);
+				sqlConn.addEventListener(SQLErrorEvent.ERROR,errorHandler);
+				
+				sqlConn.open(dbFile);
+			}
+			
+			//创建数据表
+			protected function openHandler(e:SQLEvent):void
+			{
+				sqlConn.removeEventListener(SQLEvent.OPEN,openHandler);
+				sqlConn.removeEventListener(SQLErrorEvent.ERROR,errorHandler);
+				
+				sqlSta = new SQLStatement();
+				sqlSta.sqlConnection = sqlConn;
+				var sql:String = "CREATE TABLE IF NOT EXISTS appconfig ("+
+					" id INTEGER,"+
+					" name TEXT,"+
+					" value TEXT"+
+					" note TEXT)";
+				sqlSta.text = sql;
+				sqlSta.addEventListener(SQLEvent.RESULT, createResult);
+				sqlSta.addEventListener(SQLErrorEvent.ERROR,createError);
+				
+				sqlSta.execute();
+			}
+			
+			protected function errorHandler(e:SQLErrorEvent):void
+			{
+				sqlConn.removeEventListener(SQLEvent.OPEN,openHandler);
+				sqlConn.removeEventListener(SQLErrorEvent.ERROR,errorHandler);
+				Logger.error("加载app.db失败..."+e.error.details);
+			}
+			
+			protected function createResult(e:SQLEvent):void
+			{
+				sqlSta.removeEventListener(SQLEvent.RESULT, createResult);
+				sqlSta.removeEventListener(SQLErrorEvent.ERROR,createError);
+				
+				sqlSta = new SQLStatement();
+				sqlSta.sqlConnection = sqlConn;
+				sqlSta.text = "select * from appconfig";
+				sqlSta.execute();
+				
+				var result:SQLResult = sqlSta.getResult();
+				if(result.data.length == 0)
+				{
+					//插入初始化数据
+					var priterSql:String = "INSERT INTO appconfig (id,name, value, note) VALUES (1,'printer', '0', '打印机设置')";
+					
+					sqlSta = new SQLStatement();
+					sqlSta.sqlConnection = sqlConn;
+					sqlSta.text = priterSql;
+					sqlSta.execute();
+				}
+			}
+			
+			protected function createError(e:SQLErrorEvent):void
+			{
+				
+				sqlSta.removeEventListener(SQLEvent.RESULT, createResult);
+				sqlSta.removeEventListener(SQLErrorEvent.ERROR,createError);
+				Logger.error("加载appconfig失败..."+e.error.details);
+				
+			}
+			
+			/**获取所有的打印机*/
+			private function getAllPrinters():void
+			{
+				var printerList:Vector.<String> = PrintJob.printers;
+				for (var i:int = 0; i < printerList.length; i++)
+				{
+					printers.addItem(printerList[i]);
+				}
+			}
+			
+			protected function settingClick(e:MouseEvent):void
+			{
+				this.currentState = "setting";
+			}
+			
+			protected function closeSeeting(e:MouseEvent):void
+			{
+				this.currentState = "main";
+			}
+			
+			protected function stateChangedHandler(event:StateChangeEvent):void
+			{
+				if(currentState == "setting")
+				{
+					sqlSta = new SQLStatement();
+					sqlSta.sqlConnection = sqlConn;
+					sqlSta.text = "select * from appconfig";
+					sqlSta.execute();
+					
+					var result:SQLResult = sqlSta.getResult();
+					var settingArr:Array = result.data as Array;
+					
+					printersList.selectedIndex = settingArr[0].value;
+				}
+				
+			}
+			
+			protected function printersList_changeHandler(event:IndexChangeEvent):void
+			{
+				sqlSta = new SQLStatement();
+				sqlSta.sqlConnection = sqlConn;
+				sqlSta.text = "update appconfig set value=:value where id=:id";
+				sqlSta.parameters[":value"]=printersList.selectedIndex;
+				sqlSta.parameters[":id"]=1;
+				sqlSta.execute();
+			}
+			
+			
+			private function print():void
+			{
+				
+				var printJob:PrintJob = new PrintJob();
+				printJob.start();
+				
+				var pjo:PrintJobOptions = new PrintJobOptions;
+				pjo.printMethod = PrintMethod.VECTOR;
+				printJob.addPage(printCanvas, null, pjo);	
+				
+				printJob.send();
+			}
+			
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<s:states>
+		<s:State name="main"/>
+		<s:State name="setting"/>
+	</s:states>
+	
+	<s:Label horizontalCenter="0" top="20" text="自动打印程序"/>
+	<s:Image source="assets/imgs/settings.png" buttonMode="true" toolTip="设置" right="3" click="settingClick(event)"/>
+	<mx:Canvas id="printCanvas" width="100%" height="100%" top="50" bottom="35"/>
+	
+	<s:Group includeIn="setting" width="300" height="100" horizontalCenter="0" verticalCenter="0">
+		<s:Rect width="100%" height="100%">
+			<s:fill>
+				<s:SolidColor color="0xEBEBEB"/>
+			</s:fill>
+		</s:Rect>
+		
+		<s:Label text="打印设置" horizontalCenter="0" top="10"/>
+		<s:Image source="assets/imgs/close.png" buttonMode="true" toolTip="关闭" right="5" top="3" click="closeSeeting(event)"/>
+		
+		<s:Label text="选择打印机:" left="10" top="50"/>
+		<s:DropDownList id="printersList" left="100" top="45" minWidth="160" dataProvider="{printers}" change="printersList_changeHandler(event)"/>
+	</s:Group>
+	
+	<s:Image id="connStatus" source="assets/imgs/connection.png" bottom="1" right="2"/>
+</s:WindowedApplication>

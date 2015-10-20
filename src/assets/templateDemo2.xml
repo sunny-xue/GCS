@@ -1,0 +1,5 @@
+<template tid="null" title="未命??" w="200" h="200" bg="" bgWidth="0" bgHeight="0" bgx="-239" bgy="-50">
+  <line label="线段" w="299" h="182" x="103" y="88" fparentid="6" showTop="true" topColor="0" topSize="3" showBottom="true" bottomColor="0" bottomSize="4" showLeft="true" leftColor="0" leftSize="5" showRight="true" rightColor="0" rightSize="6" isLink="false" linkFid="null" linkType="1"/>
+  <line label="线段" w="232" h="120" x="13" y="11" fparentid="6" showTop="true" topColor="0" topSize="1" showBottom="true" bottomColor="0" bottomSize="1" showLeft="true" leftColor="0" leftSize="1" showRight="true" rightColor="0" rightSize="1" isLink="false" linkFid="null" linkType="0"/>
+  <line label="线段" w="200" h="18" x="279" y="40" fparentid="6" showTop="false" topColor="0" topSize="1" showBottom="false" bottomColor="0" bottomSize="1" showLeft="false" leftColor="0" leftSize="1" showRight="false" rightColor="0" rightSize="1" isLink="false" linkFid="null" linkType="0"/>
+</template>

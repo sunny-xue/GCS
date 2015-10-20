@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui:ResizableCanvas xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:ui="ui.*" width="400" height="300" horizontalScrollPolicy="off" verticalScrollPolicy="off"
+	fontSize="12" backgroundAlpha="0.25" addedEffect="Fade" dragable="true" resizable="true" dragInParentRect="false" minWidth="24" minHeight="12" borderStyle="none" borderColor="0x00ff00"
+	creationComplete="onCreate()" mouseDown="onMouseDown(event)" clipContent="false">
+	<mx:Script>
+		<![CDATA[
+			import com.asfusion.mate.events.Dispatcher;
+			import business.FieldVO;
+			import events.FieldSelectEvent;
+			
+			private var _fieldVO:FieldVO;
+			private var hasInit:Boolean = false;
+			
+			private function onCreate():void{
+				if(!hasInit){
+					init(_fieldVO);
+				}
+			}
+			
+			public function init(vo:FieldVO):void{
+				_fieldVO = vo;
+				if(initialized){
+					hasInit = true;
+					
+					setStyle("backgroundColor", _fieldVO.bgColor);
+					fnameTxt.setStyle("color", _fieldVO.fontColor);
+					
+					if(_fieldVO.showTestTxt){
+						fnameTxt.text = _fieldVO.txt;
+					}
+					else{
+						fnameTxt.text = _fieldVO.label;
+					}
+					
+					if(_fieldVO.size != -1){
+						fnameTxt.setStyle("fontSize", _fieldVO.size);
+					}
+					if(_fieldVO.align != null){
+						fnameTxt.setStyle("textAlign", _fieldVO.align);
+					}
+					if(_fieldVO.weight != null){
+						fnameTxt.setStyle("fontWeight", _fieldVO.weight);
+					}
+					if(_fieldVO.style != null){
+						fnameTxt.setStyle("fontStyle", _fieldVO.style);
+					}
+				}
+				else{
+					hasInit = false;
+				}
+			}
+			
+			private function onMouseDown(event:MouseEvent):void{
+				event.stopImmediatePropagation();
+				var dis:Dispatcher = new Dispatcher();
+				dis.generator = FieldSelectEvent;
+				dis.type = FieldSelectEvent.FIELD_SELECTED;
+				var obj:Object = new Object();
+				obj.field = this;
+				obj.line = null;
+				dis.generateEvent(obj);
+			}
+			
+			public function setSelected(value:Boolean):void{
+				if(value){
+					setStyle("borderStyle", "solid");
+				}
+				else{
+					setStyle("borderStyle", "none");
+				}
+			}
+			
+			public function get parentName():String{
+				return _fieldVO.parentName;
+			}
+			
+			public function get fieldName():String{
+				return _fieldVO.label;
+			}
+			
+			public function get fontSize():Number{
+				return fnameTxt.getStyle("fontSize") as Number;
+			}
+			
+			public function set fontSize(value:Number):void{
+				fnameTxt.setStyle("fontSize", value);
+			}
+			
+			public function get textAlign():String{
+				return fnameTxt.getStyle("textAlign") as String;
+			}
+			
+			public function set textAlign(value:String):void{
+				fnameTxt.setStyle("textAlign", value);
+			}
+			
+			public function get fontWeight():String{
+				return fnameTxt.getStyle("fontWeight") as String;
+			}
+			
+			public function set fontWeight(value:String):void{
+				fnameTxt.setStyle("fontWeight", value);
+			}
+			
+			public function get fontStyle():String{
+				return fnameTxt.getStyle("fontStyle") as String;
+			}
+			
+			public function set fontStyle(value:String):void{
+				fnameTxt.setStyle("fontStyle", value);
+			}
+			
+			public function get fontColor():uint{
+				return fnameTxt.getStyle("color") as uint;
+			}
+			
+			public function set fontColor(value:uint):void{
+				fnameTxt.setStyle("color", value);
+			}
+			
+			public function get testTxt():String{
+				return _fieldVO.txt;
+			}
+			
+			public function set testTxt(value:String):void{
+				_fieldVO.txt = value;
+				if(_fieldVO.showTestTxt){
+					fnameTxt.text = _fieldVO.txt;
+				}
+			}
+			
+			public function get showTestTxt():Boolean{
+				return _fieldVO.showTestTxt;
+			}
+			
+			public function set showTestTxt(value:Boolean):void{
+				_fieldVO.showTestTxt = value;
+				if(_fieldVO.showTestTxt){
+					fnameTxt.text = _fieldVO.txt;
+				}
+				else{
+					fnameTxt.text = _fieldVO.label;
+				}
+			}
+			
+			public function get linkFid():String{
+				return _fieldVO.linkFid;
+			}
+			
+			public function set linkFid(value:String):void{
+				_fieldVO.linkFid = value;
+			}
+			
+			public function get isLink():Boolean{
+				return _fieldVO.isLink;
+			}
+			
+			public function set isLink(value:Boolean):void{
+				_fieldVO.isLink = value;
+			}
+			
+			public function get linkType():int{
+				return _fieldVO.linkType;
+			}
+			
+			public function set linkType(value:int):void{
+				_fieldVO.linkType = value;
+			}
+			
+			public function generateXML():XML{
+				var xml:XML = <field/>
+				xml.@label = _fieldVO.label;
+				xml.@txt = _fieldVO.txt;
+				xml.@fid = _fieldVO.fid;
+				xml.@w = width;
+				xml.@h = height;
+				xml.@x = x;
+				xml.@y = y;
+				xml.@size = fontSize;
+				xml.@align = textAlign;
+				xml.@weight = fontWeight;
+				xml.@style = fontStyle;
+				xml.@color = fontColor.toString();
+				xml.@fparentid = _fieldVO.parentid;
+				if(_fieldVO.isConst){
+					xml.@isConst = true;
+				}
+				
+				xml.@isLink = _fieldVO.isLink;
+				xml.@linkFid = _fieldVO.linkFid;
+				if(_fieldVO.linkFid == null){
+					xml.@isLink = false;
+				}
+				xml.@linkType = _fieldVO.linkType;
+				
+				return xml;
+			}
+		]]>
+	</mx:Script>
+	<mx:Text id="fnameTxt" width="100%" selectable="false" paddingTop="0" paddingBottom="0" paddingLeft="0" paddingRight="0"/>
+</ui:ResizableCanvas>

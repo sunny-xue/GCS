@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" title="可选字段" width="200" height="400"
+	fontSize="12" paddingTop="5" paddingBottom="5" paddingLeft="5" paddingRight="5"
+	creationComplete="onCreate()" visible="{GlobalVariables.editState == GlobalVariables.FIELD_EDITING_STATE}">
+	<mx:Script>
+		<![CDATA[
+			import business.ImageVO;
+			import business.LineVO;
+			import business.GlobalVariables;
+			import business.FieldVO;
+			import business.TableVO;
+			
+			private function onCreate():void{
+				titleBar.addEventListener(MouseEvent.MOUSE_DOWN, mouseDownHandler);
+				
+				var loader:URLLoader = new URLLoader();
+				loader.addEventListener(Event.COMPLETE, loadCompleteHandler);
+				loader.load(new URLRequest("FieldList.xml"));
+			}
+			
+			private function loadCompleteHandler(event:Event):void{
+				var loader:URLLoader = event.currentTarget as URLLoader;
+				
+				var xml:XML = XML(loader.data);
+				var tableList:XMLList = xml..table;
+				for each(var table:XML in tableList){
+					var tableVO:TableVO = new TableVO();
+					tableVO.title = table.@title;
+					tableVO.tid = table.@tid;
+					tableVO.bgColor = table.@bgColor;
+					tableVO.fontColor = table.@fontColor;
+					
+					var fieldList:XMLList = table..field;
+					for each(var field:XML in fieldList){
+						var fieldVO:FieldVO = new FieldVO();
+						fieldVO.label = field.@label;
+						fieldVO.fid = field.@fid;
+						fieldVO.w = field.@w;
+						fieldVO.h = field.@h;
+						fieldVO.txt = field.@txt;
+						fieldVO.bgColor = tableVO.bgColor;
+						fieldVO.fontColor = tableVO.fontColor;
+						fieldVO.parentName = tableVO.title;
+						fieldVO.parentid = tableVO.tid;
+						tableVO.fieldList.addItem(fieldVO);
+						if(field.@lr != undefined){
+							fieldVO.lr = true;
+						}
+						if(field.@isConst != undefined){
+							fieldVO.isConst = true;
+						}
+					}
+					
+					var lineList:XMLList = table..line;
+					for each(var line:XML in lineList){
+						var lineVO:LineVO = new LineVO();
+						lineVO.label = line.@label;
+						lineVO.w = line.@w;
+						lineVO.h = line.@h;
+						lineVO.bgColor = tableVO.bgColor;
+						lineVO.fontColor = tableVO.fontColor;
+						lineVO.parentid = tableVO.tid;
+						tableVO.fieldList.addItem(lineVO);
+					}
+					
+					var imgList:XMLList = table..img;
+					for each(var img:XML in imgList){
+						var imageVO:ImageVO = new ImageVO();
+						imageVO.label = img.@label;
+						if(img.@src != undefined){
+							imageVO.src = img.@src;
+						}
+						if(img.@w != undefined){
+							imageVO.w = Number(img.@w);
+						}
+						if(img.@h != undefined){
+							imageVO.h = Number(img.@h);
+						}
+						imageVO.fontColor = tableVO.fontColor;
+						imageVO.bgColor = tableVO.bgColor;
+						imageVO.parentid = tableVO.tid;
+						tableVO.fieldList.addItem(imageVO);
+					}
+					
+					var fieldCategory:FieldCategory = new FieldCategory();
+					fieldCategory.tableVO = tableVO;
+					accordion.addChild(fieldCategory);
+					
+					GlobalVariables.tableNameLib[tableVO.tid] = tableVO.title;
+					GlobalVariables.bgColorLib[tableVO.tid] = tableVO.bgColor;
+					GlobalVariables.fontColorLib[tableVO.tid] = tableVO.fontColor;
+					
+					if(tableVO.title != "特殊字段"){
+						var tableXML:XML = <table/>
+						tableXML.@label = tableVO.title;
+						for each(field in fieldList){
+							if(field.@lr != undefined && field.@lr == true){
+								var str:String = field.@fid;
+								var fids:Array = str.split("*");
+								
+								var fieldXML:XML = <field/>
+								fieldXML.@label = "R" + field.@label;
+								fieldXML.@fid = fids[0] as String;
+								tableXML.appendChild(fieldXML);
+								
+								fieldXML = <field/>
+								fieldXML.@label = "L" + field.@label;
+								fieldXML.@fid = fids[1] as String;
+								tableXML.appendChild(fieldXML);
+							}
+							else{
+								fieldXML = <field/>
+								fieldXML.@label = field.@label;
+								fieldXML.@fid = field.@fid;
+								tableXML.appendChild(fieldXML);
+							}
+						}
+						GlobalVariables.linkFieldXML.appendChild(tableXML);
+					}
+				}
+			}
+			
+			private function mouseDownHandler(event:MouseEvent):void{
+				stage.addEventListener(MouseEvent.MOUSE_UP, mouseUpHandler);
+				stage.addEventListener(Event.MOUSE_LEAVE, mouseLeaveHandler);
+				startDrag(false, new Rectangle(0, 0, parent.width - width, parent.height - height));
+			}
+			
+			private function mouseUpHandler(event:MouseEvent):void{
+				stopDraging();
+			}
+			
+			private function mouseLeaveHandler(event:Event):void{
+				stopDraging();
+			}
+			
+			private function stopDraging():void{
+				stopDrag();
+				stage.removeEventListener(MouseEvent.MOUSE_UP, mouseUpHandler);
+				stage.removeEventListener(Event.MOUSE_LEAVE, mouseLeaveHandler);
+			}
+		]]>
+	</mx:Script>
+	<mx:Accordion id="accordion" width="100%" height="100%"/>
+</mx:Panel>
+

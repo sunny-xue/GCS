@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="400" height="300" backgroundColor="0xffffff" backgroundAlpha="0.01"
+	visible="{GlobalVariables.editState == GlobalVariables.FIELD_EDITING_STATE}" horizontalScrollPolicy="off" verticalScrollPolicy="off"
+	dragEnter="onDragEnter(event)" dragDrop="onDragDrop(event)" mouseDown="onMouseDown(event)" creationComplete="onCreate()">
+	<mx:Script>
+		<![CDATA[
+			import flash.utils.setTimeout;
+			import business.ImageVO;
+			import business.LineVO;
+			import mx.events.TweenEvent;
+			import com.asfusion.mate.events.Dispatcher;
+			import mx.controls.List;
+			import business.FieldVO;
+			import business.GlobalVariables;
+			import events.FieldSelectEvent;
+			import events.ResizeableCanvasEvent;
+			import mx.events.DragEvent;
+			import mx.managers.DragManager;
+			
+			private var _fileFilterArray:Array = [new FileFilter("JPG图片", "*.jpg"), 
+			//new FileFilter("BMP图片", "*.bmp"), 
+			new FileFilter("PNG图片", "*.png"), new FileFilter("GIF图片", "*.gif"), new FileFilter("SVG图片", "*.svg")];
+			
+			private function onCreate():void{
+				
+			}
+			
+			private function onDragEnter(event:DragEvent):void{
+				if(event.dragSource.hasFormat("items")){
+					DragManager.acceptDragDrop(this);
+				}
+			}
+			
+			private function onDragDrop(event:DragEvent):void{
+				var list:List = event.dragInitiator as List;
+				if(list.selectedItem is FieldVO){
+					var oldFieldVO:FieldVO = list.selectedItem as FieldVO;
+					var fieldVO:FieldVO = oldFieldVO.clone();
+					if(!fieldVO.lr){
+						var field:Field = new Field();
+						field.init(fieldVO);
+						field.width = fieldVO.w;
+						field.height = fieldVO.h;
+						field.x = event.localX - GlobalVariables.dropX;
+						field.y = event.localY - GlobalVariables.dropY;
+						addChild(field);
+					}
+					else{
+						var fids:Array = fieldVO.fid.split("*");
+						field = new Field();
+						var f:FieldVO = fieldVO.clone();
+						f.fid = fids[0] as String;
+						f.label = "R" + f.label;
+						field.init(f);
+						field.width = fieldVO.w;
+						field.height = fieldVO.h;
+						field.x = event.localX - GlobalVariables.dropX;
+						field.y = event.localY - GlobalVariables.dropY;
+						addChild(field);
+						
+						field = new Field();
+						f = fieldVO.clone();
+						f.fid = fids[1] as String;
+						f.label = "L" + f.label;
+						field.init(f);
+						field.width = fieldVO.w;
+						field.height = fieldVO.h;
+						field.x = event.localX - GlobalVariables.dropX;
+						field.y = event.localY - GlobalVariables.dropY + field.height;
+						addChild(field);
+					}
+					
+					var dis:Dispatcher = new Dispatcher();
+					dis.generator = FieldSelectEvent;
+					dis.type = FieldSelectEvent.FIELD_SELECTED;
+					var obj:Object = new Object();
+					obj.field = field;
+					obj.line = null;
+					dis.generateEvent(obj);
+				}
+				else if(list.selectedItem is LineVO){
+					var oldLineVO:LineVO = list.selectedItem as LineVO;
+					var lineVO:LineVO = oldLineVO.clone();
+					var line:Line = new Line();
+					line.init(lineVO);
+					line.width = lineVO.w;
+					line.height = lineVO.h;
+					line.x = event.localX - GlobalVariables.dropX;
+					line.y = event.localY - GlobalVariables.dropY;
+					addChild(line);
+					
+					dis = new Dispatcher();
+					dis.generator = FieldSelectEvent;
+					dis.type = FieldSelectEvent.FIELD_SELECTED;
+					obj = new Object();
+					obj.field = null;
+					obj.line = line;
+					dis.generateEvent(obj);
+				}
+				else if(list.selectedItem is ImageVO){
+					var oldImageVO:ImageVO = list.selectedItem as ImageVO;
+					if(oldImageVO.src != "upload"){
+						var imageVO:ImageVO = oldImageVO.clone();
+						var img:Img = new Img();
+						if(imageVO.src.substr(-4, 4).toLowerCase() == ".svg"){
+							img.initSVG(imageVO);
+						}
+						else{
+							img.initJPG(imageVO);
+						}
+						img.x = this.mouseX - imageVO.w / 2;
+						img.y = this.mouseY - imageVO.h / 2;;
+						
+						addChild(img);
+					}
+					else{
+						var fileReference:FileReference = new FileReference();
+						fileReference.addEventListener(Event.SELECT, selectHandler);
+						fileReference.browse(_fileFilterArray);
+					}
+					
+				}
+			}
+			
+			private function selectHandler(event:Event):void{
+				
+				var fileReference:FileReference = event.currentTarget as FileReference;
+				fileReference.removeEventListener(Event.SELECT, selectHandler);
+				var fileType:String = fileReference.type.toLowerCase();
+				//trace("fileType:" + fileType);
+				if(fileType == ".jpg" || fileType == ".png" || fileType == ".gif"){
+					fileReference.addEventListener(Event.COMPLETE, normalCompleteHandler);
+					//_fileReference.removeEventListener(Event.COMPLETE, bmpCompleteHandler);
+					
+				}
+				else if(fileType == ".svg"){
+					fileReference.addEventListener(Event.COMPLETE, svgCompleteHandler);
+					//fileReference.removeEventListener(Event.COMPLETE, normalCompleteHandler);
+					
+				}
+				flash.utils.setTimeout(function():void {
+					fileReference.load();
+				}, 500);
+			}
+			
+			private function normalCompleteHandler(event:Event):void{
+				//trace("normalCompleteHandler");
+				var fileReference:FileReference = event.currentTarget as FileReference;
+				fileReference.removeEventListener(Event.COMPLETE, normalCompleteHandler);
+				var imageVO:ImageVO = new ImageVO();
+				imageVO.fileReference = fileReference;
+				var img:Img = new Img();
+				img.initJPG(imageVO);
+				img.x = 0;
+				img.y = 0;
+				
+				addChild(img);
+				//swfLoader.load(fileReference.data);
+			}
+			
+			private function svgCompleteHandler(event:Event):void{
+				var fileReference:FileReference = event.currentTarget as FileReference;
+				fileReference.removeEventListener(Event.COMPLETE, normalCompleteHandler);
+				var imageVO:ImageVO = new ImageVO();
+				imageVO.fileReference = fileReference;
+				var img:Img = new Img();
+				img.initSVG(imageVO);
+				img.x = 0;
+				img.y = 0;
+				
+				addChild(img);
+			}
+			
+			public function addField(fieldVO:FieldVO):void{
+				var field:Field = new Field();
+				field.init(fieldVO);
+				field.width = fieldVO.w;
+				field.height = fieldVO.h;
+				field.x = fieldVO.x;
+				field.y = fieldVO.y;
+				addChild(field);
+			}
+			
+			public function addLine(lineVO:LineVO):void{
+				var line:Line = new Line();
+				line.init(lineVO);
+				line.width = lineVO.w;
+				line.height = lineVO.h;
+				line.x = lineVO.x;
+				line.y = lineVO.y;
+				addChild(line);
+			}
+			
+			public function addImage(imageVO:ImageVO):void{
+				var img:Img = new Img();
+				if(imageVO.src.substr(-4, 4).toLowerCase() == ".svg"){
+					img.initSVG(imageVO);
+				}
+				else{
+					img.initJPG(imageVO);
+				}
+				
+				img.width = imageVO.w;
+				img.height = imageVO.h;
+				img.x = imageVO.x;
+				img.y = imageVO.y;
+				addChild(img);
+			}
+			
+			private function onMouseDown(event:MouseEvent):void{
+				var dis:Dispatcher = new Dispatcher();
+				dis.generator = FieldSelectEvent;
+				dis.type = FieldSelectEvent.FIELD_SELECTED;
+				var obj:Object = new Object();
+				obj.field = null;
+				obj.line = null;
+				dis.generateEvent(obj);
+			}
+		]]>
+	</mx:Script>
+</mx:Canvas>

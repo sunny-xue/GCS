@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:ComboBox xmlns:mx="http://www.adobe.com/2006/mxml"
+			 creationComplete="initComponent()">
+	<mx:Script>
+		<![CDATA[
+			import mx.controls.treeClasses.DefaultDataDescriptor;
+			import mx.controls.treeClasses.ITreeDataDescriptor;
+			import mx.controls.Alert;
+			import mx.events.DropdownEvent;
+			import mx.events.ListEvent;
+			import mx.controls.listClasses.ListBase;
+
+			private var _rowCount:int=5;
+			private var _selectedItem:Object=null;
+			private var _dropdown:ListBase;
+
+			public function initComponent():void
+			{
+				addEventListener(DropdownEvent.OPEN, onOpen);
+
+			}
+
+			protected function onOpen(event:DropdownEvent):void
+			{
+				_dropdown=dropdown;
+
+			}
+
+			override public function get rowCount():int
+			{
+				return _rowCount;
+			}
+
+			override public function set rowCount(value:int):void
+			{
+				_rowCount=value;
+
+				if (dropdown)
+				{
+					dropdown.rowCount=value;
+				}
+			}
+
+			private var _dataDescriptor:ITreeDataDescriptor=new DefaultDataDescriptor();
+
+			override public function set selectedItem(value:Object):void
+			{
+				super.selectedItem = value;
+				_selectedItem=value;
+			}
+
+			override public function get selectedItem():Object
+			{
+				var item:Object=null;
+
+				if (dropdown && dropdown == _dropdown)
+				{
+					item=dropdown.selectedItem;
+					if (_dataDescriptor.isBranch(item))
+					{
+						return _selectedItem;
+					}
+
+					_selectedItem=item;
+				}
+				else
+				{
+					item=_selectedItem;
+				}
+
+				return item;
+			}
+		]]>
+	</mx:Script>
+	<mx:dropdownFactory>
+		<mx:Component>
+			<mx:Tree height="500"
+					 width="500"
+					 showRoot="false"
+					 itemClick="onItemClick(event)">
+				<mx:Script>
+					<![CDATA[
+						import mx.controls.ComboBase;
+						import mx.controls.treeClasses.DefaultDataDescriptor;
+						import mx.controls.treeClasses.ITreeDataDescriptor;
+						import mx.events.ListEvent;
+
+						private var _dataDescriptor:ITreeDataDescriptor=new DefaultDataDescriptor();
+
+						private function onItemClick(event:ListEvent):void
+						{
+							var item:Object=event.itemRenderer.data;
+							if (!_dataDescriptor.isBranch(item))
+							{
+								//this.selectedItem=item;
+								(this.owner as ComboBase).dispatchEvent(new ListEvent(ListEvent.CHANGE));
+							}
+						}
+					]]>
+				</mx:Script>
+			</mx:Tree>
+		</mx:Component>
+	</mx:dropdownFactory>
+</mx:ComboBox>

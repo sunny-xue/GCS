@@ -1,0 +1,14 @@
+<template tid="0001" title="模版示例" w="91" h="55" bg="091116A000.jpg"bgWidth="500" bgHeight="500" bgx="-100" bgy="-100">
+	<field label="固定文字" txt="这个人很懒，什么都没留下" fid="6_1" w="150" h="18" x="60" y="55" size="14" align="right" weight="bold" style="normal" color="0xf00ff0" isConst="true"/>
+	<field label="订镜时间" txt="@" fid="1_1" fparentid="1" w="50" h="18" x="5" y="5" size="12" align="left" weight="bold" style="normal" color="0x000000"/>
+	<field label="取镜时间" txt="@" fid="1_2" fparentid="1" w="60" h="18" x="10" y="10" size="14" align="center" weight="normal" style="italic" color="0xff0000"/>
+	<field label="制单人" txt="@" fid="1_3" fparentid="1" w="70" h="18" x="15" y="15" size="16" align="right" weight="bold" style="italic" color="0x00ff00"/>
+	<field label="审批人" txt="@" fid="1_4" fparentid="1" w="80" h="18" x="20" y="20" size="12" align="left" weight="normal" style="italic" color="0x0ff000"/>
+	<field label="会员号" txt="@" fid="1_5" fparentid="1" w="90" h="18" x="25" y="25" size="14" align="center" weight="bold" style="italic" color="0x000ff0"/>
+	<field label="姓名" txt="@" fid="1_6" fparentid="1" w="100" h="18" x="30" y="30" size="16" align="right" weight="normal" style="italic" color="0xf0000f"/>
+	<field label="性别" txt="@" fid="1_7" fparentid="1" w="110" h="18" x="35" y="35" size="14" align="left" weight="bold" style="normal" color="0x0f00f0"/>
+	<field label="年龄" txt="@" fid="1_8" fparentid="1" w="120" h="18" x="40" y="40" size="12" align="center" weight="normal" style="italic" color="0xf0f000"/>
+	<field label="电话" txt="@" fid="1_9" fparentid="1" w="130" h="18" x="45" y="45" size="16" align="right" weight="bold" style="normal" color="0x0f0ff0"/>
+	<field label="手机" txt="@" fid="1_10" fparentid="1" w="140" h="18" x="50" y="50" size="12" align="left" weight="normal" style="italic" color="0xf00f0f"/>
+	<field label="地址" txt="@" fid="1_11" fparentid="1" w="150" h="18" x="55" y="55" size="14" align="right" weight="bold" style="normal" color="0xf00ff0"/>
+</template>

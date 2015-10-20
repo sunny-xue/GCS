@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="100%" height="100%" label="{tableVO.title}">
+	<mx:Script>
+		<![CDATA[
+			import business.TableVO;
+			
+			[Bindable]
+			public var tableVO:TableVO;
+		]]>
+	</mx:Script>
+	<mx:List width="100%" height="100%" dataProvider="{tableVO.fieldList}" dragEnabled="true">
+		<mx:itemRenderer>
+			<mx:Component>
+				<mx:Canvas width="100%" height="20" backgroundColor="{data.bgColor}" backgroundAlpha="0.75" mouseDown="onMouseDown()">
+					<mx:Script>
+						<![CDATA[
+							import business.GlobalVariables;
+							private function onMouseDown():void{
+								GlobalVariables.dropX = this.mouseX;
+								GlobalVariables.dropY = this.mouseY;
+							}
+						]]>
+					</mx:Script>
+					<mx:Text text="{data.label}" selectable="false" color="{data.fontColor}"/>
+				</mx:Canvas>
+			</mx:Component>
+		</mx:itemRenderer>
+	</mx:List>
+</mx:Canvas>

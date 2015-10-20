@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui:ResizableCanvas xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:ui="ui.*" width="400" height="300" horizontalScrollPolicy="off" verticalScrollPolicy="off"
+	addedEffect="Fade" dragable="true" resizable="true" dragInParentRect="false" minWidth="24" minHeight="12" borderStyle="none" borderColor="0x00ff00"
+	mouseDown="onMouseDown(event)">
+	<mx:Script>
+		<![CDATA[
+			import flash.utils.setTimeout;
+			import flash.system.Capabilities;
+			import mx.controls.Image;
+			import mx.events.ResizeEvent;
+			import business.ImageVO;
+			import com.asfusion.mate.events.Dispatcher;
+			import events.FieldSelectEvent;
+			
+			private var _imageVO:ImageVO;
+			private var sourceIsSVG:Boolean = false;
+			private var hasInitJPG:Boolean = false;
+			private var hasInitSVG:Boolean = false;
+			private var imgJPG:Image;
+			private var imgSVG:MySVGViewer;
+			
+			//像素和毫米的比值
+			public static var dpiRatio:Number = 0.03937 * Capabilities.screenDPI;
+			
+			/* private function onCreate():void{
+				if(sourceIsSVG){
+					if(!hasInitSVG){
+						initSVG(_imageVO);
+					}
+				}
+				else{
+					if(!hasInitJPG){
+						initJPG(_imageVO);
+					}
+				}
+			} */
+			
+			//-------------------------------------------------------------
+			public function initJPG(vo:ImageVO):void{
+				sourceIsSVG = false;
+				this.keepProportion = false;
+				_imageVO = vo;
+				//if(initialized){
+					//hasInitJPG = true;
+					
+					imgJPG = new Image();
+					imgJPG.scaleContent = false;
+					this.addChild(imgJPG);
+					
+					if(_imageVO.fileReference != null && _imageVO.fileReference.data != null){
+						imgJPG.addEventListener(Event.INIT, imgJPGInit);
+						imgJPG.load(_imageVO.fileReference.data);
+					}
+					else if(_imageVO.src != "upload"){
+						imgJPG.addEventListener(Event.INIT, imgJPGInit2);
+						imgJPG.source = _imageVO.src;
+					}
+				//}
+				//else{
+				//	hasInitJPG = false;
+				//}
+			}
+			
+			private function imgJPGInit(event:Event):void{
+				imgJPG.width = this.width = imgJPG.content.width;
+				imgJPG.height = this.height = imgJPG.content.height;
+				this.addEventListener(ResizeEvent.RESIZE, handleJPGResize);
+			}
+			
+			private function imgJPGInit2(event:Event):void{
+				imgJPG.content.width = imgJPG.width = this.width = _imageVO.w;
+				imgJPG.content.height = imgJPG.height = this.height = _imageVO.h;
+				this.addEventListener(ResizeEvent.RESIZE, handleJPGResize);
+			}
+			
+			private function handleJPGResize(event:ResizeEvent):void{
+				imgJPG.content.width  = imgJPG.width = width;
+				imgJPG.content.height = imgJPG.height = height;
+			}
+			//-------------------------------------------------------------
+			
+			//-------------------------------------------------------------
+			public function initSVG(vo:ImageVO):void{
+				this.visible = false;
+				sourceIsSVG = true;
+				this.keepProportion = true;
+				_imageVO = vo;
+				//if(initialized){
+					trace("initSVG");
+					//hasInitSVG = true;
+					
+					imgSVG = new MySVGViewer();
+					this.addChild(imgSVG);
+					
+					if(_imageVO.fileReference != null && _imageVO.fileReference.data != null){
+						imgSVG.addEventListener(Event.INIT, imgSVGInit);
+						imgSVG.loadSVGbyXML(XML(_imageVO.fileReference.data));
+					}
+					else if(_imageVO.src != "upload"){
+						imgSVG.addEventListener(Event.INIT, imgSVGInit2);
+						imgSVG.loadSVGbyURL(_imageVO.src);
+					}
+				//}
+				//else{
+				//	hasInitSVG = false;
+				//}
+			}
+			
+			
+			private function imgSVGInit(event:Event):void{
+				imgSVG.width = width = imgSVG.origWidth;
+				imgSVG.height = height = imgSVG.origHeight;
+				this.addEventListener(ResizeEvent.RESIZE, handleSVGResize);
+				this.visible = true;
+			}
+			
+			private function imgSVGInit2(event:Event):void{
+				var rate:Number = _imageVO.w / imgSVG.origWidth;
+				imgSVG.scale = rate;
+				imgSVG.width = width = _imageVO.w;
+				imgSVG.height = height = _imageVO.h;
+				this.addEventListener(ResizeEvent.RESIZE, handleSVGResize);
+				var obj:Object = this;
+				flash.utils.setTimeout(function ():void{
+					obj.visible = true;
+				},500);
+				
+			}
+			
+			private function handleSVGResize(event:ResizeEvent):void{
+				var rate:Number = width / imgSVG.origWidth;
+				imgSVG.scale = rate;
+				imgSVG.width = width;
+				imgSVG.height = height;
+			}
+			//-------------------------------------------------------------
+			
+			private function onMouseDown(event:MouseEvent):void{
+				event.stopImmediatePropagation();
+				var dis:Dispatcher = new Dispatcher();
+				dis.generator = FieldSelectEvent;
+				dis.type = FieldSelectEvent.FIELD_SELECTED;
+				var obj:Object = new Object();
+				obj.field = null;
+				obj.line = null;
+				dis.generateEvent(obj);
+			}
+			
+			public function setSelected(value:Boolean):void{
+				if(value){
+					setStyle("borderStyle", "solid");
+				}
+				else{
+					setStyle("borderStyle", "none");
+				}
+			}
+			
+			public function generateXML():XML{
+				var xml:XML = <img/>
+				xml.@label = _imageVO.label;
+				xml.@w = width;
+				xml.@h = height;
+				xml.@x = x;
+				xml.@y = y;
+				xml.@fparentid = _imageVO.parentid;
+				xml.@src = _imageVO.src;
+				xml.@isLink = _imageVO.isLink;
+				xml.@linkFid = _imageVO.linkFid;
+				if(_imageVO.linkFid == null){
+					xml.@isLink = false;
+				}
+				xml.@linkType = _imageVO.linkType;
+				
+				return xml;
+			}
+			
+			public function get vo():ImageVO{
+				return _imageVO;
+			}
+			
+			public function get linkFid():String{
+				return _imageVO.linkFid;
+			}
+			
+			public function set linkFid(value:String):void{
+				_imageVO.linkFid = value;
+			}
+			
+			public function get isLink():Boolean{
+				return _imageVO.isLink;
+			}
+			
+			public function set isLink(value:Boolean):void{
+				_imageVO.isLink = value;
+			}
+			
+			public function get linkType():int{
+				return _imageVO.linkType;
+			}
+			
+			public function set linkType(value:int):void{
+				_imageVO.linkType = value;
+			}
+		]]>
+	</mx:Script>
+</ui:ResizableCanvas>

@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml"
+		   width="100%"
+		   height="100%"
+		   fontSize="12"
+		   xmlns:mate="http://mate.asfusion.com/"
+		   xmlns:ui="ui.*" addedToStage="onAddedToStage()">
+	<mx:Script>
+		<![CDATA[
+			import mx.events.ListEvent;
+			import mx.collections.ArrayCollection;
+			import business.GlobalVariables;
+			import events.FieldSelectEvent;
+			
+			private var _line:Line;
+			
+			private function onAddedToStage():void{
+				stage.addEventListener(KeyboardEvent.KEY_DOWN, handleKeyDown);
+			}
+			
+			private function handleKeyDown(event:KeyboardEvent):void{
+				if(GlobalVariables.editState == GlobalVariables.FIELD_EDITING_STATE && _line != null){
+					switch(event.keyCode){
+						case Keyboard.UP:
+							_line.y -= 1;
+							break;
+						case Keyboard.DOWN:
+							_line.y += 1;
+							break;
+						case Keyboard.LEFT:
+							_line.x -= 1;
+							break;
+						case Keyboard.RIGHT:
+							_line.x += 1;
+							break;
+						case Keyboard.NUMPAD_ADD:
+							_line.width += 1;
+							break;
+						case Keyboard.NUMPAD_SUBTRACT:
+							_line.width -= 1;
+							break;
+					}
+				}
+			}
+			
+			public function set line(value:Line):void
+			{
+				linkComboBox.removeEventListener(ListEvent.CHANGE, linkComboBoxChange);
+				if (_line)
+				{
+					_line.setSelected(false);
+					_line.removeEventListener(Event.REMOVED, removeHandler);
+				}
+				if (value == null)
+				{
+					//viewStack.selectedIndex=0;
+				}
+				else
+				{
+					//viewStack.selectedIndex=1;
+					value.setSelected(true);
+
+					tCheckBox.selected=value.showTop;
+					tColorPicker.selectedColor=value.topColor;
+					tStepper.value=value.topSize;
+
+					bCheckBox.selected=value.showBottom;
+					bColorPicker.selectedColor=value.bottomColor;
+					bStepper.value=value.bottomSize;
+
+					lCheckBox.selected=value.showLeft;
+					lColorPicker.selectedColor=value.leftColor;
+					lStepper.value=value.leftSize;
+
+					rCheckBox.selected=value.showRight;
+					rColorPicker.selectedColor=value.rightColor;
+					rStepper.value=value.rightSize;
+
+					linkCheckBox.selected=value.isLink;
+					radiogroup.selectedValue=value.linkType;
+
+					if (value.linkFid != null)
+					{
+						var fidTmp:String=value.linkFid;
+						var fieldList:XMLList=GlobalVariables.linkFieldXML..field;
+						for each (var field:XML in fieldList)
+						{
+							if (field.@fid == fidTmp)
+							{
+								linkComboBox.selectedItem=field;
+							}
+						}
+					}
+					else
+					{
+						//if(linkComboBox){
+						linkComboBox.selectedItem=null;
+							//}
+					}
+					linkComboBox.addEventListener(ListEvent.CHANGE, linkComboBoxChange);
+					value.addEventListener(Event.REMOVED, removeHandler);
+				}
+				_line=value;
+			}
+
+			private function removeHandler(event:Event):void
+			{
+				line=null;
+			}
+
+			private function tCheckBoxChange():void
+			{
+				_line.showTop=tCheckBox.selected;
+			}
+
+			private function bCheckBoxChange():void
+			{
+				_line.showBottom=bCheckBox.selected;
+			}
+
+			private function lCheckBoxChange():void
+			{
+				_line.showLeft=lCheckBox.selected;
+			}
+
+			private function rCheckBoxChange():void
+			{
+				_line.showRight=rCheckBox.selected;
+			}
+
+			private function tColorPickerChange():void
+			{
+				_line.topColor=tColorPicker.selectedColor;
+			}
+
+			private function bColorPickerChange():void
+			{
+				_line.bottomColor=bColorPicker.selectedColor;
+			}
+
+			private function lColorPickerChange():void
+			{
+				_line.leftColor=lColorPicker.selectedColor;
+			}
+
+			private function rColorPickerChange():void
+			{
+				_line.rightColor=rColorPicker.selectedColor;
+			}
+
+			private function tStepperChange():void
+			{
+				_line.topSize=tStepper.value;
+			}
+
+			private function bStepperChange():void
+			{
+				_line.bottomSize=bStepper.value;
+			}
+
+			private function lStepperChange():void
+			{
+				_line.leftSize=lStepper.value;
+			}
+
+			private function rStepperChange():void
+			{
+				_line.rightSize=rStepper.value;
+			}
+
+			private function linkComboBoxChange(event:ListEvent):void
+			{
+				if (linkComboBox.selectedItem && linkComboBox.selectedItem.@fid != undefined)
+				{
+					var str:String=linkComboBox.selectedItem.@fid;
+					if (_line)
+					{
+						_line.linkFid=str;
+					}
+				}
+			}
+
+			private function radiogroupChange():void
+			{
+				_line.linkType=radiogroup.selectedValue as int;
+			}
+
+			private function linkCheckBoxChange():void
+			{
+				_line.isLink=linkCheckBox.selected;
+			}
+
+			private function lineSelected(event:FieldSelectEvent):void
+			{
+				line=event.line;
+			}
+		]]>
+	</mx:Script>
+	<mate:Listener type="{FieldSelectEvent.FIELD_SELECTED}"
+				   receive="lineSelected(event)"/>
+
+	<mx:CheckBox id="tCheckBox"
+				 x="10"
+				 y="10"
+				 label="上"
+				 change="tCheckBoxChange()"/>
+	<mx:Text x="10"
+			 y="33"
+			 text="颜色:"
+			 enabled="{tCheckBox.selected}"/>
+	<mx:ColorPicker id="tColorPicker"
+					x="52"
+					y="31"
+					enabled="{tCheckBox.selected}"
+					change="tColorPickerChange()"/>
+	<mx:Text x="82"
+			 y="33"
+			 text="大小:"
+			 enabled="{tCheckBox.selected}"/>
+	<mx:NumericStepper id="tStepper"
+					   x="124"
+					   y="31"
+					   enabled="{tCheckBox.selected}"
+					   change="tStepperChange()"/>
+
+	<mx:CheckBox id="bCheckBox"
+				 x="10"
+				 y="61"
+				 label="下"
+				 change="bCheckBoxChange()"/>
+	<mx:Text x="10"
+			 y="84"
+			 text="颜色:"
+			 enabled="{bCheckBox.selected}"/>
+	<mx:ColorPicker id="bColorPicker"
+					x="52"
+					y="82"
+					enabled="{bCheckBox.selected}"
+					change="bColorPickerChange()"/>
+	<mx:Text x="82"
+			 y="84"
+			 text="大小:"
+			 enabled="{bCheckBox.selected}"/>
+	<mx:NumericStepper id="bStepper"
+					   x="124"
+					   y="82"
+					   enabled="{bCheckBox.selected}"
+					   change="bStepperChange()"/>
+
+	<mx:CheckBox id="lCheckBox"
+				 x="10"
+				 y="112"
+				 label="左"
+				 change="lCheckBoxChange()"/>
+	<mx:Text x="10"
+			 y="135"
+			 text="颜色:"
+			 enabled="{lCheckBox.selected}"/>
+	<mx:ColorPicker id="lColorPicker"
+					x="52"
+					y="133"
+					enabled="{lCheckBox.selected}"
+					change="lColorPickerChange()"/>
+	<mx:Text x="82"
+			 y="135"
+			 text="大小:"
+			 enabled="{lCheckBox.selected}"/>
+	<mx:NumericStepper id="lStepper"
+					   x="124"
+					   y="133"
+					   enabled="{lCheckBox.selected}"
+					   change="lStepperChange()"/>
+
+	<mx:CheckBox id="rCheckBox"
+				 x="10"
+				 y="163"
+				 label="右"
+				 change="rCheckBoxChange()"/>
+	<mx:Text x="10"
+			 y="186"
+			 text="颜色:"
+			 enabled="{rCheckBox.selected}"/>
+	<mx:ColorPicker id="rColorPicker"
+					x="52"
+					y="184"
+					enabled="{rCheckBox.selected}"
+					change="rColorPickerChange()"/>
+	<mx:Text x="82"
+			 y="186"
+			 text="大小:"
+			 enabled="{rCheckBox.selected}"/>
+	<mx:NumericStepper id="rStepper"
+					   x="124"
+					   y="184"
+					   enabled="{rCheckBox.selected}"
+					   change="rStepperChange()"/>
+	<mx:CheckBox id="linkCheckBox"
+				 x="10"
+				 y="214"
+				 label="关联字段"
+				 change="linkCheckBoxChange()"/>
+	<ui:TreeComboBox id="linkComboBox"
+					 x="10"
+					 y="237"
+					 width="176"
+					 visible="{linkCheckBox.selected}"
+					 labelField="@label"
+					 dataProvider="{GlobalVariables.linkFieldXML}">
+	</ui:TreeComboBox>
+	<mx:RadioButtonGroup id="radiogroup"
+						 change="radiogroupChange()"/>
+	<mx:RadioButton x="10"
+					y="265"
+					label="根据关联字段重复生成"
+					groupName="radiogroup"
+					visible="{linkCheckBox.selected}"
+					value="0"
+					selected="true"/>
+	<mx:RadioButton x="10"
+					y="285"
+					label="在关联字段最后生成"
+					groupName="radiogroup"
+					visible="{linkCheckBox.selected}"
+					value="1"/>
+</mx:Canvas>

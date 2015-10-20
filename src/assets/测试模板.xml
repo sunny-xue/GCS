@@ -1,0 +1,8 @@
+<template tid="" title="测试模板" w="200" h="200" bg="" bgWidth="0" bgHeight="0" bgx="0" bgy="0" isPrintBg="false">
+  <field label="打印人员" txt="莫日临" fid="1_1" w="200" h="18" x="0" y="0" size="12" align="start" weight="normal" style="normal" color="0" fparentid="1" isLink="false" linkFid="null" linkType="1"/>
+  <field label="总公司名称" txt="明亮眼镜有限公司" fid="2_1" w="200" h="18" x="31" y="165" size="12" align="start" weight="normal" style="normal" color="0" fparentid="2" isLink="false" linkFid="null" linkType="1"/>
+  <field label="R瞳高" txt="12.21" fid="4_14" w="200" h="18" x="7" y="314" size="12" align="start" weight="normal" style="normal" color="0" fparentid="4" isLink="false" linkFid="null" linkType="1"/>
+  <field label="L瞳高" txt="12.21" fid="4_15" w="200" h="18" x="7" y="332" size="12" align="start" weight="normal" style="normal" color="0" fparentid="4" isLink="false" linkFid="null" linkType="1"/>
+  <img label="QS" w="143.407" h="187.477" x="386.25" y="60.25" fparentid="6" src="QS.svg" isLink="false" linkFid="null" linkType="0"/>
+  <img label="pass" w="124.503" h="140.8" x="292.7" y="309.6" fparentid="6" src="pass.svg" isLink="false" linkFid="null" linkType="0"/>
+</template>

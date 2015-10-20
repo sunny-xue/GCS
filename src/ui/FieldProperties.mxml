@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml"
+		   width="100%"
+		   height="100%"
+		   fontSize="12"
+		   xmlns:mate="http://mate.asfusion.com/" xmlns:ui="ui.*" addedToStage="onAddedToStage()">
+
+	<mx:Script>
+		<![CDATA[
+			import mx.events.ListEvent;
+			import mx.collections.ArrayCollection;
+			import business.GlobalVariables;
+			import events.FieldSelectEvent;
+
+			[Bindable]
+			private var weight:String;
+			[Bindable]
+			private var style:String;
+
+			[Bindable]
+			public var aligns:ArrayCollection=new ArrayCollection([{label: "左对齐", data: "left"}, {label: "居中对齐", data: "center"}, {label: "右对齐", data: "right"}]);
+
+			private var _field:Field;
+			
+			private function onAddedToStage():void{
+				stage.addEventListener(KeyboardEvent.KEY_DOWN, handleKeyDown);
+			}
+			
+			private function handleKeyDown(event:KeyboardEvent):void{
+				if(GlobalVariables.editState == GlobalVariables.FIELD_EDITING_STATE && _field != null){
+					switch(event.keyCode){
+						case Keyboard.UP:
+							_field.y -= 1;
+							break;
+						case Keyboard.DOWN:
+							_field.y += 1;
+							break;
+						case Keyboard.LEFT:
+							_field.x -= 1;
+							break;
+						case Keyboard.RIGHT:
+							_field.x += 1;
+							break;
+						case Keyboard.NUMPAD_ADD:
+							_field.width += 1;
+							break;
+						case Keyboard.NUMPAD_SUBTRACT:
+							_field.width -= 1;
+							break;
+					}
+				}
+			}
+			
+			public function set field(value:Field):void
+			{
+				linkComboBox.removeEventListener(ListEvent.CHANGE, linkComboBoxChange);
+				if (_field)
+				{
+					_field.setSelected(false);
+					_field.removeEventListener(Event.REMOVED, removeHandler);
+				}
+				if (value == null)
+				{
+					//viewStack.selectedIndex = 0;
+				}
+				else
+				{
+					//viewStack.selectedIndex = 1;
+					value.setSelected(true);
+
+					parentName.text=value.parentName;
+					fieldName.text=value.fieldName;
+					fontSize.value=value.fontSize;
+					for each (var obj:Object in aligns)
+					{
+						if (obj.data == value.textAlign)
+						{
+							textAlign.selectedItem=obj;
+							break;
+						}
+					}
+					weight=value.fontWeight;
+					style=value.fontStyle;
+					fontColor.selectedColor=value.fontColor;
+					showTest.selected=testTxt.enabled=value.showTestTxt;
+					testTxt.text=value.testTxt;
+					
+					linkCheckBox.selected=value.isLink;
+					radiogroup.selectedValue=value.linkType;
+
+					if (value.linkFid != null)
+					{
+						var fidTmp:String=value.linkFid;
+						var fieldList:XMLList=GlobalVariables.linkFieldXML..field;
+						for each (var field:XML in fieldList)
+						{
+							if (field.@fid == fidTmp)
+							{
+								linkComboBox.selectedItem=field;
+							}
+						}
+					}
+					else
+					{
+						//if(linkComboBox){
+						linkComboBox.selectedItem=null;
+							//}
+					}
+					linkComboBox.addEventListener(ListEvent.CHANGE, linkComboBoxChange);
+					
+					value.addEventListener(Event.REMOVED, removeHandler);
+				}
+				_field=value;
+			}
+
+			private function removeHandler(event:Event):void
+			{
+				field=null;
+			}
+
+			private function fieldSelected(event:FieldSelectEvent):void
+			{
+				field=event.field;
+			}
+
+			private function onFontSizeChange():void
+			{
+				_field.fontSize=fontSize.value;
+			}
+
+			private function onTextAlignChange():void
+			{
+				_field.textAlign=textAlign.selectedItem.data as String;
+			}
+
+			private function onBoldBtnClick():void
+			{
+				if (weight == "bold")
+				{
+					weight="normal";
+				}
+				else
+				{
+					weight="bold";
+				}
+				_field.fontWeight=weight;
+			}
+
+			private function onItalicBtnClick():void
+			{
+				if (style == "italic")
+				{
+					style="normal";
+				}
+				else
+				{
+					style="italic";
+				}
+				_field.fontStyle=style;
+			}
+
+			private function onFontColorChange():void
+			{
+				_field.fontColor=fontColor.selectedColor;
+			}
+			
+			private function showTestChange():void
+			{
+				testTxt.enabled=_field.showTestTxt=showTest.selected;
+			}
+
+			private function testTxtChange():void
+			{
+				_field.testTxt=testTxt.text;
+			}
+
+			public function setShowTest(value:Boolean):void
+			{
+				if (_field != null)
+				{
+					showTest.selected=testTxt.enabled=_field.showTestTxt=value;
+				}
+			}
+			
+			private function linkComboBoxChange(event:ListEvent):void
+			{
+				if (linkComboBox.selectedItem && linkComboBox.selectedItem.@fid != undefined)
+				{
+					var str:String=linkComboBox.selectedItem.@fid;
+					if (_field)
+					{
+						_field.linkFid=str;
+					}
+				}
+			}
+
+			private function radiogroupChange():void
+			{
+				_field.linkType=radiogroup.selectedValue as int;
+			}
+
+			private function linkCheckBoxChange():void
+			{
+				_field.isLink=linkCheckBox.selected;
+			}
+		]]>
+	</mx:Script>
+
+	<mate:Listener type="{FieldSelectEvent.FIELD_SELECTED}"
+				   receive="fieldSelected(event)"/>
+
+	<mx:Text x="10"
+			 y="10"
+			 text="所属分类:"/>
+	<mx:Text id="parentName"
+			 x="76"
+			 y="10"/>
+	<mx:Text x="10"
+			 y="38"
+			 text="字段名称:"/>
+	<mx:Text id="fieldName"
+			 x="76"
+			 y="38"/>
+	<mx:Text x="10"
+			 y="66"
+			 text="字体颜色:"/>
+	<mx:ColorPicker id="fontColor"
+					x="74"
+					y="64"
+					change="onFontColorChange()"/>
+	<mx:Text x="10"
+			 y="96"
+			 text="字体大小:"/>
+	<mx:NumericStepper id="fontSize"
+					   x="76"
+					   y="94"
+					   minimum="6"
+					   maximum="60"
+					   value="12"
+					   stepSize="1"
+					   change="onFontSizeChange()"/>
+	<mx:Text x="10"
+			 y="124"
+			 text="对齐方式:"/>
+	<mx:ComboBox id="textAlign"
+				 x="76"
+				 y="121"
+				 width="110"
+				 dataProvider="{aligns}"
+				 change="onTextAlignChange()"/>
+	<mx:Button id="boldBtn"
+			   x="138"
+			   y="94"
+			   label="B"
+			   width="22"
+			   height="22"
+			   fontWeight="bold"
+			   paddingLeft="2"
+			   paddingRight="0"
+			   selected="{weight == 'bold'}"
+			   click="onBoldBtnClick()"/>
+	<mx:Button id="italicBtn"
+			   x="164"
+			   y="94"
+			   label="I"
+			   width="22"
+			   height="22"
+			   fontStyle="italic"
+			   paddingLeft="2"
+			   paddingRight="0"
+			   selected="{style == 'italic'}"
+			   click="onItalicBtnClick()"/>
+	<mx:CheckBox id="showTest"
+				 x="11"
+				 y="152"
+				 label="显示自定义文本"
+				 change="showTestChange()"/>
+	<mx:TextInput id="testTxt"
+				  x="10"
+				  width="176"
+				  y="184"
+				  change="testTxtChange()"/>
+	<mx:CheckBox id="linkCheckBox"
+				 x="10"
+				 y="214"
+				 label="关联字段"
+				 change="linkCheckBoxChange()"/>
+	<ui:TreeComboBox id="linkComboBox"
+					 x="10"
+					 y="237"
+					 width="176"
+					 visible="{linkCheckBox.selected}"
+					 labelField="@label"
+					 dataProvider="{GlobalVariables.linkFieldXML}">
+	</ui:TreeComboBox>
+	<mx:RadioButtonGroup id="radiogroup"
+						 change="radiogroupChange()"/>
+	<mx:RadioButton x="10"
+					y="265"
+					label="根据关联字段重复生成"
+					groupName="radiogroup"
+					value="0" visible="false"
+					/>
+	<mx:RadioButton x="10"
+					y="265"
+					label="在关联字段最后生成"
+					groupName="radiogroup"
+					visible="{linkCheckBox.selected}"
+					value="1" selected="true"/>
+</mx:Canvas>

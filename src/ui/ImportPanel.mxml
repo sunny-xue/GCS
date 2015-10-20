@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="400" height="300" title="请选择样例模版" fontSize="12" creationComplete="onCreate()">
+	<mx:Script>
+		<![CDATA[
+			import mx.managers.PopUpManager;
+			
+			private function onCreate():void{
+				var  urlLoader:URLLoader = new URLLoader();
+				urlLoader.addEventListener(Event.COMPLETE, loadCompleteHandler);
+				urlLoader.load(new URLRequest("TemplateList.xml"));
+			}
+			
+			private function loadCompleteHandler(event:Event):void{
+				var urlLoader:URLLoader = event.currentTarget as URLLoader;
+				var xml:XML = XML(urlLoader.data);
+				list.dataProvider = xml..template;
+			}
+			
+			private function onImportBtnClick():void{
+				if(list.selectedItem){
+					(this.owner as ReportDesigner).loadTemplageXML(list.selectedItem.@source);
+					PopUpManager.removePopUp(this);
+				}
+			}
+		]]>
+	</mx:Script>
+	<mx:List id="list" x="10" y="10" width="376" height="217" labelField="@label"></mx:List>
+	<mx:Button y="235" label="导入" horizontalCenter="-30" click="onImportBtnClick()"/>
+	<mx:Button y="235" label="取消" horizontalCenter="30" click="PopUpManager.removePopUp(this);"/>
+</mx:Panel>

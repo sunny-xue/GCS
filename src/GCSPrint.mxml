@@ -1,0 +1,823 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009" 
+					   xmlns:s="library://ns.adobe.com/flex/spark" 
+					   xmlns:mx="library://ns.adobe.com/flex/mx" xmlns:print="com.gcs.print.*"
+					   initialize="initHandler(event)" creationComplete="createdHandler(event)">
+	<fx:Script>
+		<![CDATA[
+			import business.FieldVO;
+			import business.GlobalVariables;
+			import business.ImageVO;
+			import business.LineVO;
+			import business.TemplateVO;
+			
+			import com.logger.core.Logger;
+			
+			import flash.utils.setTimeout;
+			
+			import mx.collections.ArrayCollection;
+			import mx.containers.Canvas;
+			import mx.controls.SWFLoader;
+			import mx.controls.Text;
+			import mx.core.UIComponent;
+			import mx.events.FlexEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.rpc.soap.WebService;
+			
+			import spark.components.Alert;
+			import spark.events.IndexChangeEvent;
+			
+			import ui.Img;
+			import ui.Line;
+			
+			private var templateReady:Boolean = false;
+			private var dataReady:Boolean = false;
+			private var templateVO:TemplateVO;
+			private var dataDic:Object;
+			//标记是否自动打印
+			private var autoPrint:Number = -1;
+			
+			private var swfloader:SWFLoader;
+			private var printCanvas:Canvas;
+			private var fidFieldDic:Object = new Object();
+			
+			private var reConnectTimer:Timer;
+			
+			//模板库
+			[Bindable]private var templateList:ArrayCollection = new ArrayCollection();
+			
+			[Bindable]private var printers:ArrayCollection = new ArrayCollection();
+			
+			//模板文件夹
+			private var file:File;
+			
+			//打印的数据文件
+			private var printDataFile:File;
+			
+			//加载模板
+			private var templateLoader:URLLoader;
+			
+			//加载打印数据
+			private var dataLoader:URLLoader;
+			
+			private var printJob:PrintJob = new PrintJob();
+			
+			private var fileFilter:FileFilter = new FileFilter("数据文件(*.xml;)","*.xml;");
+			
+			private var ws:WebService;
+			
+			protected function initHandler(evt:FlexEvent):void
+			{
+				//设置log的级别
+				
+				Logger.currentLevel = CONFIG::LOG_LEVEL;
+				styleManager.loadStyleDeclarations("style/theme.swf");		
+				
+				Logger.log("load theme...");
+			}
+			
+			private function initWebService():void
+			{
+				if(ws == null)
+				{
+					ws = new WebService();
+					ws.wsdl= wsdlAddress.text;  
+					ws.addEventListener(ResultEvent.RESULT,resultFunction);
+					ws.addEventListener(FaultEvent.FAULT, falutFunction);
+					ws.getOperation(serverFunction.text).send(paramters.text);  
+				}
+			}
+			
+			protected function createdHandler(event:FlexEvent):void
+			{
+				var Stageheight:Number = flash.system.Capabilities.screenResolutionY;  
+				var Stagewidth:Number = flash.system.Capabilities.screenResolutionX; 
+				
+				this.move(Stagewidth/2-this.width/2,Stageheight/2-this.height/2);
+				
+				getAllPrinters();
+				initURLLoader();
+			}
+			
+			private function getAllPrinters():void
+			{
+				var printerList:Vector.<String> = PrintJob.printers;
+				for (var i:int = 0; i < printerList.length; i++)
+				{
+					printers.addItem(printerList[i]);
+				}
+				
+				if(printers.length > 0)printersList.selectedItem = printers.getItemAt(0);
+				
+				Logger.log("load all printers: " + printerList.length + ", default printer is " + printersList.selectedItem.toString());
+			}
+			
+			private function initURLLoader():void
+			{
+				templateLoader  = new URLLoader();
+				templateLoader.addEventListener(Event.COMPLETE, templateLoadCompleteHandler);
+				templateLoader.addEventListener(IOErrorEvent.IO_ERROR, templateLoadError);
+				
+				
+				dataLoader  = new URLLoader();
+				dataLoader.addEventListener(Event.COMPLETE, dataLoadCompleteHandler);
+				dataLoader.addEventListener(IOErrorEvent.IO_ERROR, dataLoadLoadError);
+			}
+			
+			protected function templateLoadError(evt:IOErrorEvent):void
+			{
+				Alert.show("当前模板加载错误!");
+				
+				Logger.error("load template info error: " + evt.toString());
+			}
+			
+			protected function dataLoadLoadError(evt:IOErrorEvent):void
+			{
+				Alert.show("加载打印数据失败!");
+				Logger.error("load print data info error: " + evt.toString());
+			}
+			
+			private function templateLoadCompleteHandler(event:Event):void
+			{
+				var loader:URLLoader = event.currentTarget as URLLoader;
+				
+				var xml:XML = XML(loader.data);
+				
+				Logger.log("template data: "+file.nativePath +"\\"+tplist.selectedItem.toString()+" \n" + xml.toString());
+				
+				templateVO = new TemplateVO();
+				templateVO.tid = xml.@tid;
+				templateVO.title = xml.@title;
+				templateVO.w = xml.@w;
+				templateVO.h = xml.@h;
+				if(xml.@bg != undefined && xml.@bg != "" && xml.@isPrintBg != undefined && xml.@isPrintBg == "true")
+				{
+					templateVO.bg = xml.@bg;
+					templateVO.bgWidth = xml.@bgWidth;
+					templateVO.bgHeight = xml.@bgHeight;
+					templateVO.bgx = xml.@bgx;
+					templateVO.bgy = xml.@bgy;
+				}
+				
+				var fieldList:XMLList = xml..field;
+				for each(var field:XML in fieldList)
+				{
+					var fieldVO:FieldVO = new FieldVO();
+					fieldVO.label = field.@label
+					fieldVO.fid = field.@fid
+					fieldVO.parentid = field.@fparentid;
+					fieldVO.w = field.@w;
+					fieldVO.h = field.@h;
+					fieldVO.x = field.@x;
+					fieldVO.y = field.@y;
+					fieldVO.size = field.@size;
+					fieldVO.align = field.@align;
+					fieldVO.weight = field.@weight;
+					fieldVO.style = field.@style;
+					fieldVO.fontColor = field.@color;
+					fieldVO.txt = field.@txt;
+					if(field.@isConst != undefined)
+					{
+						fieldVO.isConst = true;
+						fieldVO.showTestTxt = true;
+					}
+					
+					if(field.@isLink != undefined)
+					{
+						fieldVO.isLink = (field.@isLink == "true"?true:false);
+						
+						if(field.@linkFid == "null")
+						{
+							fieldVO.linkFid = null;
+						}else
+						{
+							fieldVO.linkFid = field.@linkFid;
+						}
+						fieldVO.linkType = field.@linkType;
+					}
+					
+					templateVO.fieldList.push(fieldVO);
+				}
+				
+				var lineList:XMLList = xml..line;
+				for each(var line:XML in lineList)
+				{
+					var lineVO:LineVO = new LineVO();
+					lineVO.label = line.@label;
+					lineVO.w = line.@w;
+					lineVO.h = line.@h;
+					lineVO.x = line.@x;
+					lineVO.y = line.@y;
+					
+					lineVO.showTop = (line.@showTop == "true"?true:false);
+					lineVO.topColor = line.@topColor;
+					lineVO.topSize = line.@topSize;
+					
+					lineVO.showBottom = (line.@showBottom == "true"?true:false);
+					lineVO.bottomColor = line.@bottomColor;
+					lineVO.bottomSize = line.@bottomSize;
+					
+					lineVO.showLeft = (line.@showLeft == "true"?true:false);
+					lineVO.leftColor = line.@leftColor;
+					lineVO.leftSize = line.@leftSize;
+					
+					lineVO.showRight = (line.@showRight == "true"?true:false);
+					lineVO.rightColor = line.@rightColor;
+					lineVO.rightSize = line.@rightSize;
+					
+					lineVO.isLink = (line.@isLink == "true"?true:false);
+					
+					if(line.@linkFid == "null")
+					{
+						lineVO.linkFid = null;
+					}else
+					{
+						lineVO.linkFid = line.@linkFid;
+					}
+					lineVO.linkType = line.@linkType;
+					
+					templateVO.lineList.push(lineVO);
+				}
+				
+				var imageList:XMLList = xml..img;
+				for each(var img:XML in imageList)
+				{
+					var imageVO:ImageVO = new ImageVO();
+					imageVO.label = img.@label;
+					imageVO.w = img.@w;
+					imageVO.h = img.@h;
+					imageVO.x = img.@x;
+					imageVO.y = img.@y;
+					imageVO.parentid = img.@fparentid;
+					
+					imageVO.src = img.@src;
+					
+					imageVO.isLink = (img.@isLink == "true"?true:false);
+					
+					if(img.@linkFid == "null")
+					{
+						imageVO.linkFid = null;
+					}else
+					{
+						imageVO.linkFid = img.@linkFid;
+					}
+					imageVO.linkType = img.@linkType;
+					
+					templateVO.imgList.push(imageVO);
+				}
+				
+				templateReady = true;
+				if(dataReady)
+				{
+					prepareData();
+				}
+			}
+			
+			private function dataLoadCompleteHandler(event:Event):void
+			{
+				var xml:XML = XML(dataLoader.data);
+				
+				printDataReady(xml);
+				
+				Logger.log("print data: "+ printDataFile.nativePath+" \n" + xml.toString());
+				
+			}
+			
+			private function printDataReady(xml:XML):void
+			{
+				dataDic = new Object();
+				if(getFields(xml) == true)
+				{
+					dataReady = true;
+					if(templateReady)
+					{
+						prepareData();
+					}
+				}
+			}
+			
+			private function getFields(xml:XML):Boolean
+			{
+				if(xml.@fid != undefined)
+				{
+					var fid:String = String(xml.@fid);
+					var data:String = String(xml.text()[0]);
+					var arr:Array = dataDic[fid] as Array;
+					if(arr == null)
+					{
+						arr = new Array();
+						arr.push(data);
+						dataDic[fid] = arr;
+					}else
+					{
+						arr.push(data);
+					}
+				}
+				var list:XMLList = xml.children();
+				var l:Number = 0;
+				if(list.length() == 0)
+				{
+					return true;
+				}else
+				{
+					for each(var item:XML in list)
+					{
+						if(getFields(item))
+						{
+							l++;
+							if(l == list.length())
+							{
+								return true;
+							}
+						}
+					}
+				}
+				return false;
+			}
+			
+			private function createTxt(field:FieldVO, str:String):Text
+			{
+				var txt:Text = new Text();
+				txt.width = field.w;
+				txt.height = field.h;
+				txt.setStyle("color", field.fontColor);
+				txt.setStyle("fontSize", field.size);
+				txt.setStyle("fontStyle", field.style);
+				txt.setStyle("fontWeight", field.weight);
+				txt.setStyle("textAlign", field.align);
+				txt.text = str;
+				return txt;
+			}
+			
+			private function createLine(lineVO:LineVO):UIComponent
+			{
+				var line:UIComponent = new UIComponent();
+				
+				line.width = lineVO.w;
+				line.height = lineVO.h;
+				
+				var g:Graphics = line.graphics;
+				g.clear();
+				
+				if(lineVO.showTop)
+				{
+					g.beginFill(lineVO.topColor);
+					g.drawRect(0, 0, lineVO.w, lineVO.topSize);
+					g.endFill();
+				}
+				
+				if(lineVO.showBottom)
+				{
+					g.beginFill(lineVO.bottomColor);
+					g.drawRect(0, lineVO.h - lineVO.bottomSize, lineVO.w, lineVO.bottomSize);
+					g.endFill();
+				}
+				
+				if(lineVO.showLeft)
+				{
+					g.beginFill(lineVO.leftColor);
+					g.drawRect(0, 0, lineVO.leftSize, lineVO.h);
+					g.endFill();
+				}
+				
+				if(lineVO.showRight)
+				{
+					g.beginFill(lineVO.rightColor);
+					g.drawRect(lineVO.w - lineVO.rightSize, 0, lineVO.rightSize, lineVO.h);
+					g.endFill();
+				}
+				
+				return line;
+			}
+			
+			
+			private function prepareData():void
+			{
+				printCanvas = new Canvas();
+				printCanvas.setStyle("horizontalCenter", 0);
+				printCanvas.setStyle("verticalCenter", 0);
+				printCanvas.setStyle("backgroundColor", 0xffffff);
+				printCanvas.horizontalScrollPolicy = "off";
+				printCanvas.verticalScrollPolicy = "off";
+				printCanvas.width = templateVO.w * GlobalVariables.dpiRatio;
+				printCanvas.height = templateVO.h * GlobalVariables.dpiRatio;
+				container.addChild(printCanvas);
+				
+				if(templateVO.bg != null)
+				{
+					swfloader = new SWFLoader();
+					swfloader.scaleContent = false;
+					swfloader.addEventListener(Event.INIT, swfloaderInitHandler);
+					swfloader.load(templateVO.bg);
+					printCanvas.addChild(swfloader);
+				}
+				
+				for each(var imageVO:ImageVO in templateVO.imgList)
+				{
+					var img:Img = new Img();
+					if(imageVO.src.substr(-4, 4).toLowerCase() == ".svg")
+					{
+						img.initSVG(imageVO);
+					}else
+					{
+						img.initJPG(imageVO);
+					}
+					img.width = imageVO.w;
+					img.height = imageVO.h;
+					img.x = imageVO.x;
+					img.y = imageVO.y;
+					img.dragable = false;
+					img.resizable = false;
+					printCanvas.addChild(img);
+					
+					if(imageVO.y + imageVO.h > printCanvas.height)
+					{
+						printCanvas.height = imageVO.y + imageVO.h;
+					}
+				}
+				
+				for each(var field:FieldVO in templateVO.fieldList)
+				{
+					if(!field.isLink)
+					{
+						var txt:Text;
+						if(!field.isConst)
+						{
+							var arr:Array = dataDic[field.fid] as Array;
+							fidFieldDic[field.fid] = field;
+							if(arr != null)
+							{
+								for each(var str:String in arr)
+								{
+									if(str.toLowerCase() != "null")
+									{
+										txt = createTxt(field, str);
+										txt.x = field.x;
+										txt.y = field.y + field.hasAlreadyBuild * field.h;
+										printCanvas.addChild(txt);
+										field.hasAlreadyBuild += 1;
+									}
+								}
+							}
+						}else
+						{
+							txt = createTxt(field, field.txt);
+							txt.x = field.x;
+							txt.y = field.y;
+							printCanvas.addChild(txt);
+						}
+						if(txt != null && (txt.y + txt.height > printCanvas.height))
+						{
+							printCanvas.height = txt.y + txt.height;
+						}
+					}
+				}
+				
+				for each(var lineVO:LineVO in templateVO.lineList)
+				{
+					if(!lineVO.isLink)
+					{
+						var line:UIComponent = createLine(lineVO);
+						
+						line.x = lineVO.x;
+						line.y = lineVO.y;
+						
+						printCanvas.addChild(line);
+						
+						if(line.y + line.height > printCanvas.height)
+						{
+							printCanvas.height = line.y + line.height;
+						}
+					}
+					
+				}
+				
+				for each(field in templateVO.fieldList)
+				{
+					if(field.isLink)
+					{
+						if(field.linkType == 1)
+						{
+							var fieldVO:FieldVO = fidFieldDic[field.linkFid] as FieldVO;
+							var newY:Number = fieldVO.y + fieldVO.hasAlreadyBuild * fieldVO.h;
+							if(!field.isConst)
+							{
+								arr = dataDic[field.fid] as Array;
+								fidFieldDic[field.fid] = field;
+								if(arr != null)
+								{
+									for each(str in arr)
+									{
+										if(str.toLowerCase() != "null")
+										{
+											txt = createTxt(field, str);
+											txt.x = field.x;
+											txt.y = newY + field.hasAlreadyBuild * field.h;
+											printCanvas.addChild(txt);
+											field.hasAlreadyBuild += 1;
+										}
+									}
+								}
+							}else
+							{
+								txt = createTxt(field, field.txt);
+								txt.x = field.x;
+								txt.y = newY;
+								printCanvas.addChild(txt);
+							}
+							if(txt.y + txt.height > printCanvas.height)
+							{
+								printCanvas.height = txt.y + txt.height;
+							}
+						}
+					}
+				}
+				
+				for each(lineVO in templateVO.lineList)
+				{
+					if(lineVO.isLink){
+						if(lineVO.linkType == 0)
+						{
+							arr = dataDic[lineVO.linkFid] as Array;
+							
+							if(arr != null)
+							{
+								for each(str in arr)
+								{
+									line = createLine(lineVO);
+									line.x = lineVO.x;
+									line.y = lineVO.y + lineVO.hasAlreadyBuild * line.height;
+									printCanvas.addChild(line);
+									lineVO.hasAlreadyBuild += 1;
+								}
+							}
+						}else if(lineVO.linkType == 1)
+						{
+							fieldVO = fidFieldDic[lineVO.linkFid] as FieldVO;
+							newY = fieldVO.y + fieldVO.hasAlreadyBuild * fieldVO.h;
+							line = createLine(lineVO);
+							line.x = lineVO.x;
+							line.y = newY;
+							printCanvas.addChild(line);
+						}
+						if(line.y + line.height > printCanvas.height)
+						{
+							printCanvas.height = line.y + line.height;
+						}
+					}
+					
+				}
+				
+				if(autoPrint == 1)
+				{
+					flash.utils.setTimeout(function ():void
+					{
+						onPrint();
+					}, 2000);
+				}else
+				{
+					GlobalVariables.printReady = true;
+				}
+			}
+			
+			private function swfloaderInitHandler(event:Event):void
+			{
+				swfloader.content.width  = swfloader.width = templateVO.bgWidth;
+				swfloader.content.height = swfloader.height = templateVO.bgHeight;
+				
+				flash.utils.setTimeout(function ():void
+				{
+					swfloader.setStyle("horizontalCenter", templateVO.bgx);
+					swfloader.setStyle("verticalCenter", templateVO.bgy);
+				}, 1000);
+			}
+			
+			private function onPrint():void
+			{
+				var pagesToPrint:uint = 0;
+				var printReady:Boolean = false;
+				
+				if(autoPrintTrigger.selected == false)
+				{
+					if(printJob.start()) 
+					{       
+						printReady = true;
+						Logger.log("ready to print manually...");
+					}
+				}else
+				{
+					if(printJob.start2(null, false))
+					{
+						printReady = true;
+						Logger.log("ready to print automatic...");
+					}
+				}
+			
+				if(printReady == true)
+				{
+					try
+					{
+						var pjo:PrintJobOptions = new PrintJobOptions;
+						
+						pjo.printMethod = PrintMethod.VECTOR;
+						printJob.addPage(printCanvas, null, pjo);				
+						pagesToPrint++;
+						
+						Logger.log("print method is vector.");
+					}
+					catch(e:Error) 
+					{
+						Logger.error("print job addpage  error:" + e.message);
+					}
+					
+					if(pagesToPrint > 0)
+					{
+						printJob.send();
+						Logger.log("print begin");
+					}
+				}
+			}
+			
+			private function loadTemplateLib():void
+			{
+				templateList.removeAll();
+				
+				var list:Array = file.getDirectoryListing(); 
+				
+				templateLibURLTxt.text = file.nativePath;
+				
+				for(var i:Number = 0; i < list.length; i++)
+				{  
+					var pattern:RegExp = new RegExp("\w*([-.]xml)$");  
+					
+					if(pattern.test(list[i].nativePath) == true)
+						templateList.addItem(list[i].name);  
+				}  
+				
+				templateList.refresh();
+				
+				if(templateList.length > 0)
+					tplist.enabled = true;
+				else
+					tplist.enabled = false;
+			}
+			
+			protected function templateChanged():void
+			{
+				templateLoader.load(new URLRequest(file.nativePath +"\\"+tplist.selectedItem.toString()));
+			}
+			
+			protected function setTemplateLibURL(event:MouseEvent):void
+			{
+				if(file == null)
+				{
+					file = new File();
+					file.addEventListener(Event.SELECT, selectHandler);
+				}
+				
+				file.browseForDirectory("模板库文件夹");
+			}
+			
+			private function setPrintData(evt:MouseEvent):void
+			{
+					if(printDataFile == null)
+					{
+						printDataFile = new File();
+						printDataFile.addEventListener(Event.SELECT, selectPrintDataHandler);
+					}
+					
+					printDataFile.browseForOpen("打印数据文件",[fileFilter]);
+			}
+			
+			
+			private  function selectHandler(event:Event):void
+			{
+				loadTemplateLib();
+			}
+			
+			private function selectPrintDataHandler(evt:Event):void
+			{
+				printData.text = printDataFile.nativePath;
+				
+				dataLoader.load( new URLRequest(printDataFile.nativePath));
+			}
+			
+			protected function refreshList(evt:MouseEvent):void
+			{
+				loadTemplateLib();
+			}
+			
+			protected function setPrinter(event:IndexChangeEvent):void
+			{
+				printJob.printer = printersList.selectedItem.toString();
+				
+				Logger.log("set printer: "+ printersList.selectedItem.toString());
+			}
+			
+			protected function autoPrintTriggerHandler(event:Event):void
+			{
+				if(autoPrintTrigger.selected)
+					autoPrint = 1;
+				else 
+					autoPrint = -1
+						
+				Logger.log("automatic print: "+ autoPrintTrigger.selected.toString());
+			}
+			
+			//export log file
+			private var logFile:File;
+			protected function exportLog(event:MouseEvent):void
+			{
+				if(logFile == null)
+				{
+					logFile = new File();
+					logFile.addEventListener(Event.SELECT, logFileSelected);
+				}
+				
+				logFile.browseForSave("选择保存日志的文件夹");
+			}
+			
+			protected function logFileSelected(evt:Event):void
+			{
+				Logger.export(logFile.nativePath);
+			}
+			
+			private function webSend():void
+			{
+				if(wsdlAddress.text == "" || serverFunction.text == "")
+				{
+					Alert.show("完善webservice信息");
+					return;
+				}
+				initWebService();
+				ws.loadWSDL();  
+			}  
+			
+			private function resultFunction(evt:ResultEvent):void
+			{  
+				cleanWS();
+				
+				printDataReady(XML(evt.result));
+				Logger.log("data form webservice: "+evt.result.toString());
+			}  
+			
+			protected function falutFunction(evt:FaultEvent):void
+			{
+				cleanWS();
+				
+				Alert.show("服务器返回错误信息，详情请查看系统日志。");
+				Logger.error("web service request error:"+evt.fault.toString());
+			}
+			
+			private function cleanWS():void
+			{
+				ws.removeEventListener(FaultEvent.FAULT,falutFunction);
+				ws.removeEventListener(ResultEvent.RESULT, resultFunction);
+				
+				ws = null;
+			}
+			
+		]]>
+	</fx:Script>
+	<s:VGroup width="100%" height="100%">
+	<mx:ApplicationControlBar width="100%" height="30" verticalAlign="middle">
+		<s:HGroup width="100%" verticalAlign="middle" paddingLeft="5">
+			<s:CheckBox id="autoPrintTrigger" label="自动打印" change="autoPrintTriggerHandler(event)"/>
+			<s:Button label="打印" styleName="printBtnSkin" click="onPrint()" visible="{autoPrintTrigger.selected == false}" enabled="{GlobalVariables.printReady &amp;&amp; (autoPrintTrigger.selected == false)}"
+					  buttonMode="true" toolTip="手动打印"/>
+		</s:HGroup>
+		
+		<s:HGroup width="100%" verticalAlign="middle">
+			<s:Label text="选择打印机："/>
+			<s:DropDownList id="printersList" minWidth="140" dataProvider="{printers}" change="setPrinter(event)"/>
+		</s:HGroup>
+		
+		<s:HGroup width="100%" verticalAlign="middle" gap="5" horizontalAlign="right" paddingRight="5">
+			<s:TextInput id="printData" editable="false" minWidth="200"/>
+			<s:Button label="选择打印数据" click="setPrintData(event)"/>
+		</s:HGroup>
+		
+		<s:HGroup width="100%" verticalAlign="middle" gap="5" horizontalAlign="right" paddingRight="5">
+			<s:TextInput id="templateLibURLTxt" editable="false" minWidth="200"/>
+			<s:Button label="设置模板路径" click="setTemplateLibURL(event)"/>
+			
+			<s:DropDownList id="tplist" enabled="false" prompt="选择打印模板" minWidth="140" change="templateChanged()" dataProvider="{templateList}"/>
+			<s:Button label="刷新" click="refreshList(event)" styleName="refreshBtnSkin" toolTip="刷新打印模板" buttonMode="true"/>
+		</s:HGroup>
+	</mx:ApplicationControlBar>
+		
+	<mx:ApplicationControlBar width="100%" height="30" verticalAlign="middle">
+		<s:HGroup width="100%" verticalAlign="middle" gap="5">
+			<s:TextInput id="wsdlAddress" prompt="webService URL" minWidth="200"/>
+			<s:TextInput id="serverFunction" prompt="webService function" minWidth="60"/>
+			<s:TextInput id="paramters" prompt="paramters" minWidth="120"/>
+			<s:Button label="发送" click="webSend()"/>
+		</s:HGroup>
+		
+		<s:Button label="导出运行日志" click="exportLog(event)" right="10"/>
+	</mx:ApplicationControlBar>
+	<s:Spacer height="20"/>
+	<mx:Canvas id="container" width="100%" height="100%"/>
+	</s:VGroup>
+</s:WindowedApplication>

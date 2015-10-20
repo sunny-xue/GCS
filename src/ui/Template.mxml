@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:ui="ui.*" width="100%" height="100%"
+	horizontalScrollPolicy="off" addedEffect="Fade" creationComplete="onCreate()">
+	<mx:Script>
+		<![CDATA[
+			import business.ImageVO;
+			import business.LineVO;
+			import events.ResizeableCanvasEvent;
+			import flash.utils.setTimeout;
+			import mx.events.ResizeEvent;
+			import mx.controls.SWFLoader;
+			import business.FieldVO;
+			import business.GlobalVariables;
+			import business.TemplateVO;
+			
+			public var templateVO:TemplateVO;
+			private var hasInit:Boolean = false;
+			private var initBg:Boolean = false;
+			public var _fileReference:FileReference;
+			private var _fileFilterArray:Array = [new FileFilter("JPG图片", "*.jpg"), 
+			//new FileFilter("BMP图片", "*.bmp"), 
+			new FileFilter("PNG图片", "*.png"), new FileFilter("GIF图片", "*.gif")];
+			private var _swfLoader:SWFLoader;
+			
+			private function onCreate():void{
+				if(!hasInit){
+					init(templateVO);
+				}
+				
+				_fileReference = new FileReference();
+				_fileReference.addEventListener(Event.SELECT, selectHandler);
+				addEventListener(ResizeableCanvasEvent.DROP, dropHandler);
+				
+				stage.addEventListener(KeyboardEvent.KEY_DOWN, handleKeyDown);
+			}
+			
+			private function handleKeyDown(event:KeyboardEvent):void{
+				if(GlobalVariables.editState == GlobalVariables.BACKGROUND_EDITING_STATE){
+					switch(event.keyCode){
+						case Keyboard.UP:
+							var temp:Number = swfContainer.getStyle("verticalCenter") as Number;
+							swfContainer.setStyle("verticalCenter", temp - 1);
+							break;
+						case Keyboard.DOWN:
+							temp = swfContainer.getStyle("verticalCenter") as Number;
+							swfContainer.setStyle("verticalCenter", temp + 1);
+							break;
+						case Keyboard.LEFT:
+							temp = swfContainer.getStyle("horizontalCenter") as Number;
+							swfContainer.setStyle("horizontalCenter", temp - 1);
+							break;
+						case Keyboard.RIGHT:
+							temp = swfContainer.getStyle("horizontalCenter") as Number;
+							swfContainer.setStyle("horizontalCenter", temp + 1);
+							break;
+						case Keyboard.NUMPAD_ADD:
+							swfContainer.width += 1;
+							break;
+						case Keyboard.NUMPAD_SUBTRACT:
+							swfContainer.width -= 1;
+							break;
+					}
+				}
+			}
+			
+			private function dropHandler(event:ResizeableCanvasEvent):void{
+				var f:Field = event.object as Field;
+				if(f){
+					if(!borderCanvas.hitTestPoint(event.stageX, event.stageY)){
+						delete fieldPage.removeChild(f);
+						f = null;
+					}
+				}
+				
+				var l:Line = event.object as Line;
+				if(l){
+					if(!borderCanvas.hitTestPoint(event.stageX, event.stageY)){
+						delete fieldPage.removeChild(l);
+						l = null;
+					}
+				}
+				
+				var i:Img = event.object as Img;
+				if(i){
+					if(!borderCanvas.hitTestPoint(event.stageX, event.stageY)){
+						delete fieldPage.removeChild(i);
+						i = null;
+					}
+				}
+			}
+			
+			public function init(vo:TemplateVO):void{
+				templateVO = vo;
+				if(initialized){
+					hasInit = true;
+					
+					if(vo.bg != ""){
+						initBg = true;
+						swfLoader.source = vo.bg;
+					}
+					fieldPage.width = borderCanvas.width = vo.w * GlobalVariables.dpiRatio;
+					fieldPage.height = borderCanvas.height = vo.h * GlobalVariables.dpiRatio;
+					GlobalVariables.templateWidth = vo.w;
+					GlobalVariables.templateHeight = vo.h;
+					GlobalVariables.templateName = vo.title;
+					//spacer.height = fieldPage.height + 100;
+					
+					for each(var fieldVO:FieldVO in templateVO.fieldList){
+						fieldPage.addField(fieldVO);
+					}
+					
+					for each(var lineVO:LineVO in templateVO.lineList){
+						fieldPage.addLine(lineVO);
+					}
+					
+					for each(var imageVO:ImageVO in templateVO.imgList){
+						fieldPage.addImage(imageVO);
+					}
+				}
+				else{
+					hasInit = false;
+				}
+			}
+			//更改大小
+			public function setSize(w:Number, h:Number):void{
+				fieldPage.width = borderCanvas.width = w * GlobalVariables.dpiRatio;
+				fieldPage.height = borderCanvas.height = h * GlobalVariables.dpiRatio;
+				GlobalVariables.templateWidth = w;
+				GlobalVariables.templateHeight = h;
+				//spacer.height = fieldPage.height + 100;
+			}
+			//导入背景图
+			public function importBackground():void{
+				swfContainer.removeEventListener(ResizeEvent.RESIZE, swfContainerResize);
+				_fileReference.browse(_fileFilterArray);
+			}
+			
+			private function selectHandler(event:Event):void{
+				templateVO.bg = "upload";
+				var fileType:String = _fileReference.type.toLowerCase();
+				if(fileType == ".jpg" || fileType == ".png" || fileType == ".gif"){
+					_fileReference.addEventListener(Event.COMPLETE, normalCompleteHandler);
+					//_fileReference.removeEventListener(Event.COMPLETE, bmpCompleteHandler);
+					_fileReference.load();
+				}
+				/* else if(fileType == ".bmp"){
+					_fileReference.addEventListener(Event.COMPLETE, bmpCompleteHandler);
+					_fileReference.removeEventListener(Event.COMPLETE, normalCompleteHandler);
+					_fileReference.load();
+				} */
+			}
+			
+			private function normalCompleteHandler(event:Event):void{
+				swfLoader.load(_fileReference.data);
+			}
+			
+			/* private function bmpCompleteHandler(event:Event):void{
+				var bmpDecoder:BMPDecoder = new BMPDecoder();
+				var bitmapDate:BitmapData = bmpDecoder.decode(_fileReference.data);
+				var bitmap:Bitmap = new Bitmap(bitmapDate);
+				swfLoader.source = bitmap;
+				swfLoader.callLater(function ():void{
+					swfLoader.dispatchEvent(new Event(Event.INIT));
+				});
+			} */
+			
+			private function backgroundInit():void{
+				if(initBg){
+					initBg = false;
+					
+					swfContainer.visible = false;
+					swfContainer.width = templateVO.bgWidth;
+					swfContainer.height = templateVO.bgHeight;
+					
+					swfLoader.content.width  = swfLoader.width = swfContainer.width;
+					swfLoader.content.height = swfLoader.height = swfContainer.height;
+					
+					flash.utils.setTimeout(function ():void{
+						swfContainer.setStyle("horizontalCenter", templateVO.bgx);
+						swfContainer.setStyle("verticalCenter", templateVO.bgy);
+						/* swfContainer.x = borderCanvas.x + templateVO.bgx;
+						swfContainer.y = borderCanvas.y + templateVO.bgy; */
+						swfContainer.visible = true;
+					}, 1000);	
+				}
+				else{
+					var ratio:Number = swfLoader.content.width / borderCanvas.width;
+					swfContainer.width = borderCanvas.width;
+					swfContainer.height = swfLoader.content.height / ratio;
+					
+					swfLoader.content.width  = swfLoader.width = swfContainer.width;
+					swfLoader.content.height = swfLoader.height = swfContainer.height;
+					GlobalVariables.editState = GlobalVariables.BACKGROUND_EDITING_STATE;
+					
+					swfContainer.setStyle("horizontalCenter", 0);
+					swfContainer.setStyle("verticalCenter", 0);
+					/* swfContainer.x = (spacer.width - swfContainer.width) / 2;
+					swfContainer.y = (spacer.height - swfContainer.height) / 2; */
+					
+				}
+				
+				swfContainer.addEventListener(ResizeEvent.RESIZE, swfContainerResize);
+			}
+			//清除背景图
+			public function clearBackground():void{
+				templateVO.bg = "";
+				templateVO.bgWidth = 0;
+				templateVO.bgHeight = 0;
+				templateVO.bgx = 0;
+				templateVO.bgy = 0;
+				swfLoader.source = null;
+				swfContainer.width = 0;
+				swfContainer.height = 0;
+				swfContainer.removeEventListener(ResizeEvent.RESIZE, swfContainerResize);
+			}
+			
+			private function swfContainerResize(event:ResizeEvent):void{
+				swfLoader.content.width  = swfLoader.width = swfContainer.width;
+				swfLoader.content.height = swfLoader.height = swfContainer.height;
+				
+				/* var temp:Number = swfContainer.y + swfContainer.height + 50;
+				if(temp > spacer.height)
+					spacer.height = temp; */
+			}
+			
+			public function set templateName(value:String):void{
+				templateVO.title = value;
+				GlobalVariables.templateName = value;
+			}
+			
+			public function generateXML():XML{
+				var xml:XML = <template/>
+				xml.@tid = templateVO.tid;
+				xml.@title = templateVO.title;
+				xml.@w = Math.floor(fieldPage.width / GlobalVariables.dpiRatio);
+				xml.@h = Math.floor(fieldPage.height / GlobalVariables.dpiRatio);
+				xml.@bg = templateVO.bg;
+				xml.@bgWidth = swfContainer.width;
+				xml.@bgHeight = swfContainer.height;
+				var currentHC:Number = this.getStyle("horizontalCenter") as Number;
+				//xml.@bgx = swfContainer.x - borderCanvas.x;
+				xml.@bgx = currentHC;
+				var currentVC:Number = this.getStyle("verticalCenter") as Number;
+				//xml.@bgy = swfContainer.y - borderCanvas.y;
+				xml.@bgy = currentVC;
+				xml.@isPrintBg = GlobalVariables.isPrintBg;
+				for each(var ds:DisplayObject in fieldPage.getChildren()){
+					if(ds is Field){
+						var field:Field = ds as Field
+						if(field.isLink == false || field.linkFid == null){
+							var item:XML = field.generateXML();
+							xml.appendChild(item);
+						}
+						else{
+							continue;
+						}
+						
+					}
+					else if(ds is Line){
+						var line:Line = ds as Line;
+						if(line.isLink == false || line.linkFid == null){
+							item = line.generateXML();
+							xml.appendChild(item);
+						}
+						else{
+							continue;
+						}
+					}
+					else if(ds is Img){
+						var img:Img = ds as Img;
+						if(img.isLink == false || img.linkFid == null){
+							if(img.vo.src != "upload"){
+								item = img.generateXML();
+								xml.appendChild(item);
+							}
+						}
+						else{
+							continue;
+						}
+					}
+				}
+				for each(ds in fieldPage.getChildren()){
+					if(ds is Field){
+						field = ds as Field;
+						if(field.isLink == true && field.linkFid != null){
+							item = field.generateXML();
+							xml.appendChild(item);
+						}
+						else{
+							continue;
+						}
+					}
+					else if(ds is Line){
+						line = ds as Line;
+						if(line.isLink == true && line.linkFid != null){
+							item = line.generateXML();
+							xml.appendChild(item);
+						}
+						else{
+							continue;
+						}
+					}
+					
+				}
+				trace(xml.toXMLString());
+				return xml;
+			}
+			
+			public function setAllFieldShowTestTxt(value:Boolean):void{
+				for each(var ds:DisplayObject in fieldPage.getChildren()){
+					if(ds is Field){
+						(ds as Field).showTestTxt = value;
+					}
+				}
+			}
+			
+			public function getUploadImageVO():Array{
+				var arr:Array = new Array();
+				for each(var ds:DisplayObject in fieldPage.getChildren()){
+					if(ds is Img){
+						var imageVO:ImageVO = (ds as Img).vo;
+						if(imageVO.src == "upload"){
+							arr.push(imageVO);
+						}
+					}
+				}
+				return arr;
+			}
+		]]>
+	</mx:Script>
+	<mx:Canvas id="spacer" width="100%" height="100%">
+		<ui:ResizableCanvas id="swfContainer" width="0" height="0" horizontalCenter="0" verticalCenter="0" dragInParentRect="false" allowBringToFront="false" allowBringToBack="false"
+			dragable="{GlobalVariables.editState == GlobalVariables.BACKGROUND_EDITING_STATE}" resizable="{GlobalVariables.editState == GlobalVariables.BACKGROUND_EDITING_STATE}"
+			horizontalScrollPolicy="off" verticalScrollPolicy="off">
+			<mx:SWFLoader id="swfLoader" width="1" height="1" scaleContent="false" init="backgroundInit()" cacheAsBitmap="true"/>
+		</ui:ResizableCanvas>
+		<mx:Canvas id="borderCanvas" borderStyle="solid" borderColor="0x00ff00" horizontalCenter="0" verticalCenter="0" horizontalScrollPolicy="off" verticalScrollPolicy="off"/>
+		<ui:FieldPage id="fieldPage" horizontalCenter="0" verticalCenter="0"/>
+	</mx:Canvas>
+</mx:Canvas>

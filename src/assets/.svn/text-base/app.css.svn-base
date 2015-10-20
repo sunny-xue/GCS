@@ -1,0 +1,76 @@
+/* CSS file */
+Application 
+{
+  font-family: "Myriad Web";
+  font-size: 12;
+}
+
+DataGrid
+{
+  vertical-grid-lines: false;
+  border-style: none;
+  selection-color: #C1FFC5;
+  roll-over-color: #7CFF77;
+  alternating-item-colors: #F4FBFF, #FFFFFF;
+}
+
+VScrollBar {
+  downArrowUpSkin: 
+    Embed(source="/assets/downArrow.png");
+  downArrowOverSkin: 
+    Embed(source="/assets/downArrow.png");
+  downArrowDownSkin: 
+    Embed(source="/assets/downArrow.png");
+  upArrowUpSkin: 
+    Embed(source="/assets/upArrow.png");
+  upArrowOverSkin: 
+    Embed(source="/assets/upArrow.png");
+  upArrowDownSkin: 
+    Embed(source="/assets/upArrow.png");
+  thumbDownSkin: 
+    Embed(source="/assets/thumb.png",
+      scaleGridLeft="7", scaleGridTop="5", 
+      scaleGridRight="8", scaleGridBottom="7");
+  thumbUpSkin: 
+    Embed(source="/assets/thumb.png",
+      scaleGridLeft="7", scaleGridTop="5", 
+      scaleGridRight="8", scaleGridBottom="7");        
+  thumbOverSkin: 
+    Embed(source="/assets/thumb.png",
+      scaleGridLeft="7", scaleGridTop="5", 
+      scaleGridRight="8", scaleGridBottom="7");       
+  trackSkin:
+    Embed(source="/assets/scrolltrack.png",
+      scaleGridLeft="7", scaleGridTop="4", 
+      scaleGridRight="8", scaleGridBottom="6");       
+} 
+HScrollBar {
+  downArrowUpSkin: 
+    Embed(source="/assets/downArrow.png");
+  downArrowOverSkin: 
+    Embed(source="/assets/downArrow.png");
+  downArrowDownSkin: 
+    Embed(source="/assets/downArrow.png");
+  upArrowUpSkin: 
+    Embed(source="/assets/upArrow.png");
+  upArrowOverSkin: 
+    Embed(source="/assets/upArrow.png");
+  upArrowDownSkin: 
+    Embed(source="/assets/upArrow.png");
+  thumbDownSkin: 
+    Embed(source="/assets/thumb.png",
+      scaleGridLeft="7", scaleGridTop="5", 
+      scaleGridRight="8", scaleGridBottom="7");
+  thumbUpSkin: 
+    Embed(source="/assets/thumb.png",
+      scaleGridLeft="7", scaleGridTop="5", 
+      scaleGridRight="8", scaleGridBottom="7");        
+  thumbOverSkin: 
+    Embed(source="/assets/thumb.png",
+      scaleGridLeft="7", scaleGridTop="5", 
+      scaleGridRight="8", scaleGridBottom="7");       
+  trackSkin:
+    Embed(source="/assets/scrolltrack.png",
+      scaleGridLeft="7", scaleGridTop="4", 
+      scaleGridRight="8", scaleGridBottom="6");       
+}   

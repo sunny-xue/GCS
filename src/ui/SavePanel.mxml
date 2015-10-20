@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="400" height="160" fontSize="12" title="保存模版" creationComplete="onCreate()">
+	<mx:Script>
+		<![CDATA[
+			import business.ImageVO;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.rpc.http.HTTPService;
+			import mx.controls.Alert;
+			import mx.managers.PopUpManager;
+			import business.GlobalVariables;
+			
+			private var uploadImageVOList:Array;
+			private var template:Template;
+			
+			private function onCreate():void{
+				templateName.text = GlobalVariables.templateName;
+				ExternalInterface.addCallback("sendResultToFlex", getResult);
+			}
+			
+			private function onSaveClick():void{
+				setEnabled(false);
+				
+				var t:Template = GlobalVariables.template;
+				t.templateName = templateName.text;
+				
+				uploadImageVOList = t.getUploadImageVO();
+				
+				if(t.templateVO.bg == "upload"){
+					//上传图片
+					//../print_pic_upload.jsp
+					uploadBackgroundImage();
+					
+				}
+				else if(uploadImageVOList.length > 0){
+					uploadImage();
+				}
+				else{
+					saveXML();
+				}
+			}
+			
+			private function uploadBackgroundImage():void{
+				var t:Template = GlobalVariables.template;
+				t._fileReference.addEventListener(DataEvent.UPLOAD_COMPLETE_DATA, uploadbackImgCompleteHandler);
+				t._fileReference.upload(new URLRequest("../print_pic_upload.jsp"));
+				progressBar.source = t._fileReference;
+				progressBar.visible = true;
+			}
+			
+			private function uploadbackImgCompleteHandler(event:DataEvent):void{
+				var t:Template = GlobalVariables.template;
+				t._fileReference.removeEventListener(DataEvent.UPLOAD_COMPLETE_DATA, uploadbackImgCompleteHandler);
+				
+				progressBar.visible = false;
+				progressBar.source = null;
+				
+				var xml:XML = XML(event.data);
+				/* <?xml version="1.0" encoding="utf-8" ?>
+				<res>
+					<result>1成功2失败</result>
+					<mname>mname</mname>
+				</res> */
+				if(xml.result == "1"){
+					t.templateVO.bg = String(xml.mname);
+					uploadImage();
+				}
+				else{
+					mx.controls.Alert.show("上传背景图失败,请稍后重试.");
+					setEnabled(true);
+				}
+			}
+			
+			private function uploadImage():void{
+				trace("uploadImage");
+				if(uploadImageVOList.length != 0){
+					var vo:ImageVO = uploadImageVOList[uploadImageVOList.length - 1] as ImageVO;
+					
+					vo.fileReference.addEventListener(DataEvent.UPLOAD_COMPLETE_DATA, uploadImgCompleteHandler);
+					vo.fileReference.upload(new URLRequest("../print_pic_upload.jsp"));
+					progressBar.source = vo.fileReference;
+					progressBar.visible = true;
+				}
+				else{
+					saveXML();
+				}
+			}
+			
+			private function uploadImgCompleteHandler(event:DataEvent):void{
+				var vo:ImageVO = uploadImageVOList[uploadImageVOList.length - 1] as ImageVO;
+				vo.fileReference.removeEventListener(DataEvent.UPLOAD_COMPLETE_DATA, uploadImgCompleteHandler);
+				
+				progressBar.visible = false;
+				progressBar.source = null;
+				
+				var xml:XML = XML(event.data);
+				/* <?xml version="1.0" encoding="utf-8" ?>
+				<res>
+					<result>1成功2失败</result>
+					<mname>mname</mname>
+				</res> */
+				if(xml.result == "1"){
+					vo.src = String(xml.mname);
+					uploadImageVOList.pop();
+					uploadImage();
+				}
+				else{
+					mx.controls.Alert.show("上传图片失败,请稍后重试.");
+					setEnabled(true);
+				}
+			}
+			
+			private function saveXML():void{
+				var t:Template = GlobalVariables.template;
+				
+				var xml:XML = t.generateXML();
+				ExternalInterface.call("savePrintTemplet", t.templateVO.tid, t.templateVO.title, xml.toXMLString());
+			}
+			
+			public function getResult(result:String, tid:String):void{
+				var t:Template = GlobalVariables.template;
+				if(result == "保存成功！"){
+					t.templateVO.tid = tid;
+					Alert.show("保存成功!");
+					setEnabled(true);
+					PopUpManager.removePopUp(this);
+				}
+				else{
+					Alert.show(result);
+					setEnabled(true);
+				}
+			}
+			
+			
+			private function onCancleClick():void{
+				PopUpManager.removePopUp(this);
+			}
+			
+			private function setEnabled(value:Boolean):void{
+				templateName.enabled = saveBtn.enabled = cancleBtn.enabled = value;
+			}
+		]]>
+	</mx:Script>
+	<mx:Text x="10" y="10" text="请输入模版名称:"/>
+	<mx:TextInput id="templateName" x="10" y="38" width="376"/>
+	<mx:Button id="saveBtn" x="278" y="94" label="保存" click="onSaveClick()"/>
+	<mx:Button id="cancleBtn" x="336" y="94" label="取消" click="onCancleClick()"/>
+	<mx:ProgressBar id="progressBar" x="10" y="68" width="376" labelPlacement="center" label="上传图片中..." visible="false"/>
+</mx:Panel>

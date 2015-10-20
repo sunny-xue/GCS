@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui:ResizableCanvas xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:ui="ui.*" width="400" height="300" horizontalScrollPolicy="off" verticalScrollPolicy="off"
+	fontSize="12" backgroundAlpha="0.25" addedEffect="Fade" dragable="true" resizable="true" dragInParentRect="false" minWidth="24" minHeight="12" borderStyle="none" borderColor="0x00ff00"
+	creationComplete="onCreate()" mouseDown="onMouseDown(event)">
+	<mx:Script>
+		<![CDATA[
+			import com.asfusion.mate.events.Dispatcher;
+			import business.LineVO;
+			import events.FieldSelectEvent;
+			
+			private var _lineVO:LineVO;
+			private var hasInit:Boolean = false;
+			
+			private function onCreate():void{
+				if(!hasInit){
+					init(_lineVO);
+				}
+			}
+			
+			public function init(vo:LineVO):void{
+				_lineVO = vo;
+				if(initialized){
+					hasInit = true;
+					
+					setStyle("backgroundColor", _lineVO.bgColor);
+				}
+				else{
+					hasInit = false;
+				}
+			}
+			
+			private function onMouseDown(event:MouseEvent):void{
+				event.stopImmediatePropagation();
+				var dis:Dispatcher = new Dispatcher();
+				dis.generator = FieldSelectEvent;
+				dis.type = FieldSelectEvent.FIELD_SELECTED;
+				var obj:Object = new Object();
+				obj.field = null;
+				obj.line = this;
+				dis.generateEvent(obj);
+			}
+			
+			public function setSelected(value:Boolean):void{
+				if(value){
+					setStyle("borderStyle", "solid");
+				}
+				else{
+					setStyle("borderStyle", "none");
+				}
+			}
+			
+			public function generateXML():XML{
+				var xml:XML = <line/>
+				xml.@label = _lineVO.label;
+				xml.@w = width;
+				xml.@h = height;
+				xml.@x = x;
+				xml.@y = y;
+				xml.@fparentid = _lineVO.parentid;
+				
+				xml.@showTop = _lineVO.showTop;
+				xml.@topColor = _lineVO.topColor;
+				xml.@topSize = _lineVO.topSize;
+		
+				xml.@showBottom = _lineVO.showBottom;
+				xml.@bottomColor = _lineVO.bottomColor;
+				xml.@bottomSize = _lineVO.bottomSize;
+		
+				xml.@showLeft = _lineVO.showLeft;
+				xml.@leftColor = _lineVO.leftColor;
+				xml.@leftSize = _lineVO.leftSize;
+		
+				xml.@showRight = _lineVO.showRight;
+				xml.@rightColor = _lineVO.rightColor;
+				xml.@rightSize = _lineVO.rightSize;
+				
+				xml.@isLink = _lineVO.isLink;
+				xml.@linkFid = _lineVO.linkFid;
+				if(_lineVO.linkFid == null){
+					xml.@isLink = false;
+				}
+				xml.@linkType = _lineVO.linkType;
+				
+				return xml;
+			}
+			
+			public function get showTop():Boolean{
+				return _lineVO.showTop;
+			}
+			public function set showTop(value:Boolean):void{
+				_lineVO.showTop = value;
+				invalidateDisplayList();
+			}
+			public function get topColor():uint{
+				return _lineVO.topColor;
+			}
+			public function set topColor(value:uint):void{
+				_lineVO.topColor = value;
+				invalidateDisplayList();
+			}
+			public function get topSize():Number{
+				return _lineVO.topSize;
+			}
+			public function set topSize(value:Number):void{
+				_lineVO.topSize = value;
+				invalidateDisplayList();
+			}
+		
+			public function get showBottom():Boolean{
+				return _lineVO.showBottom;
+			}
+			public function set showBottom(value:Boolean):void{
+				_lineVO.showBottom = value;
+				invalidateDisplayList();
+			}
+			public function get bottomColor():uint{
+				return _lineVO.bottomColor;
+			}
+			public function set bottomColor(value:uint):void{
+				_lineVO.bottomColor = value;
+				invalidateDisplayList();
+			}
+			public function get bottomSize():Number{
+				return _lineVO.bottomSize;
+			}
+			public function set bottomSize(value:Number):void{
+				_lineVO.bottomSize = value;
+				invalidateDisplayList();
+			}
+		
+			public function get showLeft():Boolean{
+				return _lineVO.showLeft;
+			}
+			public function set showLeft(value:Boolean):void{
+				_lineVO.showLeft = value;
+				invalidateDisplayList();
+			}
+			public function get leftColor():uint{
+				return _lineVO.leftColor;
+			}
+			public function set leftColor(value:uint):void{
+				_lineVO.leftColor = value;
+				invalidateDisplayList();
+			}
+			public function get leftSize():Number{
+				return _lineVO.leftSize;
+			}
+			public function set leftSize(value:Number):void{
+				_lineVO.leftSize = value;
+				invalidateDisplayList();
+			}
+		
+			public function get showRight():Boolean{
+				return _lineVO.showRight;
+			}
+			public function set showRight(value:Boolean):void{
+				_lineVO.showRight = value;
+				invalidateDisplayList();
+			}
+			public function get rightColor():uint{
+				return _lineVO.rightColor;
+			}
+			public function set rightColor(value:uint):void{
+				_lineVO.rightColor = value;
+				invalidateDisplayList();
+			}
+			public function get rightSize():Number{
+				return _lineVO.rightSize;
+			}
+			public function set rightSize(value:Number):void{
+				_lineVO.rightSize = value;
+				invalidateDisplayList();
+			}
+			
+			public function get linkFid():String{
+				return _lineVO.linkFid;
+			}
+			
+			public function set linkFid(value:String):void{
+				_lineVO.linkFid = value;
+			}
+			
+			public function get isLink():Boolean{
+				return _lineVO.isLink;
+			}
+			
+			public function set isLink(value:Boolean):void{
+				_lineVO.isLink = value;
+			}
+			
+			public function get linkType():int{
+				return _lineVO.linkType;
+			}
+			
+			public function set linkType(value:int):void{
+				_lineVO.linkType = value;
+			}
+			
+			override protected function updateDisplayList(unscaledWidth:Number, unscaledHeight:Number):void{
+				super.updateDisplayList(unscaledWidth, unscaledHeight);
+				
+				var g:Graphics = can.graphics;
+				g.clear();
+				
+				if(_lineVO && _lineVO.showTop){
+					g.beginFill(_lineVO.topColor);
+					g.drawRect(0, 0, unscaledWidth, _lineVO.topSize);
+					g.endFill();
+				}
+				
+				if(_lineVO && _lineVO.showBottom){
+					g.beginFill(_lineVO.bottomColor);
+					g.drawRect(0, unscaledHeight - _lineVO.bottomSize, unscaledWidth, _lineVO.bottomSize);
+					g.endFill();
+				}
+				
+				if(_lineVO && _lineVO.showLeft){
+					g.beginFill(_lineVO.leftColor);
+					g.drawRect(0, 0, _lineVO.leftSize, unscaledHeight);
+					g.endFill();
+				}
+				
+				if(_lineVO && _lineVO.showRight){
+					g.beginFill(_lineVO.rightColor);
+					g.drawRect(unscaledWidth - _lineVO.rightSize, 0, _lineVO.rightSize, unscaledHeight);
+					g.endFill();
+				}
+			}
+		]]>
+	</mx:Script>
+	<mx:Canvas id="can" width="100%" height="100%"/>
+</ui:ResizableCanvas>

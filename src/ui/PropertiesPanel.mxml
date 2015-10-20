@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="200" height="350" title="属性" xmlns:mate="http://mate.asfusion.com/"
+	fontSize="12" visible="{GlobalVariables.editState == GlobalVariables.FIELD_EDITING_STATE}" creationComplete="onCreate()" xmlns:ui="ui.*">
+	<mx:Script>
+		<![CDATA[
+			import events.FieldSelectEvent;
+			import business.GlobalVariables;
+			
+			private function onCreate():void{
+				titleBar.addEventListener(MouseEvent.MOUSE_DOWN, mouseDownHandler);
+			}
+			
+			private function mouseDownHandler(event:MouseEvent):void{
+				stage.addEventListener(MouseEvent.MOUSE_UP, mouseUpHandler);
+				stage.addEventListener(Event.MOUSE_LEAVE, mouseLeaveHandler);
+				startDrag(false, new Rectangle(0, 0, parent.width - width, parent.height - height));
+			}
+			
+			private function mouseUpHandler(event:MouseEvent):void{
+				stopDraging();
+			}
+			
+			private function mouseLeaveHandler(event:Event):void{
+				stopDraging();
+			}
+			
+			private function stopDraging():void{
+				stopDrag();
+				stage.removeEventListener(MouseEvent.MOUSE_UP, mouseUpHandler);
+				stage.removeEventListener(Event.MOUSE_LEAVE, mouseLeaveHandler);
+			}
+			
+			private function lineSelected(event:FieldSelectEvent):void
+			{
+				if(event.field != null){
+					viewStack.selectedIndex = 1;
+				}
+				else if(event.line != null){
+					viewStack.selectedIndex = 2;
+				}
+				else{
+					viewStack.selectedIndex = 0;
+				}
+			}
+		]]>
+	</mx:Script>
+	
+	<mate:Listener type="{FieldSelectEvent.FIELD_SELECTED}"
+				   receive="lineSelected(event)"/>
+	
+	<mx:ViewStack id="viewStack" width="100%" height="100%" creationPolicy="all">
+		<mx:Canvas width="100%" height="100%">
+			<mx:Text text="未选中任何对象" horizontalCenter="0" verticalCenter="0"/>
+		</mx:Canvas>
+		<ui:FieldProperties id="fieldProperties"/>
+		<ui:LineProperties id="lineProperties"/>
+	</mx:ViewStack>
+</mx:Panel>
